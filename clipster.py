@@ -1,3 +1,5 @@
+#!/usr/bin/python
+from __future__ import print_function
 from gi.repository import Gtk, Gdk, GLib, GObject
 import signal
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -36,8 +38,9 @@ class Clipster(object):
 
     def client(self, board):
         stdin = ""
-        if sys.stdin in select.select([sys.stdin],[],[],0)[0]:
-            stdin = sys.stdin.read()
+        if not sys.stdin.isatty():
+            if sys.stdin in select.select([sys.stdin],[],[],0)[0]:
+                stdin = sys.stdin.read()
 
         message = "{0}:{1}".format(board, stdin)
 
@@ -47,7 +50,7 @@ class Clipster(object):
         self.sock_c.sendall(message)
         data = self.sock_c.recv(1024)
         if data:
-            print(data)
+            print(data,end='')
         self.sock_c.close()
 
     def read_from_clip(self, board, _, board_type):
@@ -106,12 +109,12 @@ class Clipster(object):
                 if content:
                     self.clips.primary.set_text(content, len=-1)
                 else:
-                    conn.sendall('\n\n'.join(self.boards["primary"][::-1]))
+                    conn.sendall('\n'.join(self.boards["primary"][::-1]))
             elif board == "C":
                 if content:
                     self.clips.primary.set_text(content, len=-1)
                 else:
-                    conn.sendall('\n\n'.join(self.boards["clipboard"][::-1]))
+                    conn.sendall('\n'.join(self.boards["clipboard"][::-1]))
         conn.close()
         return True
 
