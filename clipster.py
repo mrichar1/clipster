@@ -120,6 +120,9 @@ class Clipster(object):
             # Some apps update primary during mouse drag (chrome)
             # Block at start to prevent repeated triggering
             board.handler_block(event_id)
+            # FIXME: get_pointer() is deprecated. Look into:
+            # gdk_seat_get_pointer -> gdk_device_get_state
+            # once GdkSeat is in stable
             while (Gdk.ModifierType.BUTTON1_MASK & self.window.get_display().get_pointer()[3]):
                 # Do nothing while mouse button is held down (selection dragging)
                 pass
