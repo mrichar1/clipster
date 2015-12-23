@@ -38,7 +38,7 @@ class Clipster(object):
 
         sock_c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock_c.connect(sock_file)
-        sock_c.sendall(message)
+        sock_c.sendall(message.encode('utf-8'))
         sock_c.close()
 
     class Daemon(object):
@@ -166,7 +166,7 @@ class Clipster(object):
                     recv = conn.recv(8192)
                     if not recv:
                         break
-                    data.append(recv)
+                    data.append(recv.decode('utf-8'))
                     recv_total += len(recv)
                     if recv_total > max_input:
                         break
