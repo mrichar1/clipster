@@ -1,4 +1,7 @@
 #!/usr/bin/python
+
+"""Clipster - Clipboard manager."""
+
 from __future__ import print_function
 from gi.repository import Gtk, Gdk, GLib, GObject
 import signal
@@ -39,20 +42,24 @@ class Clipster(object):
         sock_c.close()
 
     class Daemon(object):
+        """Handles clipboard events, client requests, stores history."""
+
         def __init__(self):
             """Set up clipboard objects and history dict."""
             self.primary = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
             self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
             self.boards = {"PRIMARY": [], "CLIPBOARD": []}
-            self.window = self.p_id = self.c_id = sock_s = sock_c = None
+            self.window = None
+            self.p_id = self.c_id = None
+            self.sock_s = None
 
         def keypress_handler(self, widget, event):
             """Handler for selection_widget keypress events."""
             # Hide window if ESC is pressed
-            if (event.keyval == Gdk.KEY_Escape):
+            if event.keyval == Gdk.KEY_Escape:
                 self.window.hide()
 
-        def selection_handler(self, tree, treepath, treecol, board):
+        def selection_handler(self, tree, path, col, board):
             """Handler for selection widget 'select' event."""
 
             # Get selection
@@ -63,6 +70,8 @@ class Clipster(object):
             self.window.hide()
 
         def selection_widget(self, board):
+            """GUI window for selecting items from clipboard history."""
+
             self.window = Gtk.Window(title="Clipster")
             model = Gtk.ListStore(str)
             for item in self.boards[board][::-1]:
@@ -84,8 +93,8 @@ class Clipster(object):
         def read_history_file(self):
             """Read clipboard history from file."""
             try:
-                with open(hist_file, 'r') as f:
-                    self.boards.update(json.load(f))
+                with open(hist_file, 'r') as hist_f:
+                    self.boards.update(json.load(hist_f))
             except IOError as exc:
                 if exc.errno == errno.ENOENT:
                     # Not an error if there is no history file
@@ -94,8 +103,8 @@ class Clipster(object):
         def write_history_file(self):
             """Write clipboard history to file."""
 
-            with open(hist_file, 'w') as f:
-                json.dump(self.boards, f)
+            with open(hist_file, 'w') as hist_f:
+                json.dump(self.boards, hist_f)
 
         def update_board(self, board, data):
             """Update a clipboard."""
@@ -133,7 +142,7 @@ class Clipster(object):
                 if dev.get_source() == Gdk.InputSource.MOUSE:
                     mouse = dev
                     break
-            while (Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(mouse)[3]):
+            while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(mouse)[3]:
                 # Do nothing while mouse button is held down (selection dragging)
                 pass
 
@@ -145,7 +154,9 @@ class Clipster(object):
             board.handler_unblock(event_id)
             return text
 
-        def socket_listen(self, sock_s, g_flags):
+        def socket_listen(self, sock_s, _):
+            """Establish a socket listening for client connections."""
+
             conn, _ = sock_s.accept()
             conn.setblocking(0)
             data = []
@@ -163,10 +174,10 @@ class Clipster(object):
                     break
             if data:
                 sent = ''.join(data)
-                signal, board, content = sent.split(':', 2)
-                if signal == "SELECT":
+                sig, board, content = sent.split(':', 2)
+                if sig == "SELECT":
                     self.selection_widget(board)
-                elif signal == "BOARD":
+                elif sig == "BOARD":
                     if content:
                         self.update_board(board, content)
             conn.close()
@@ -224,9 +235,10 @@ class Clipster(object):
             self.sock_s.setblocking(0)
             self.sock_s.bind(sock_file)
             self.sock_s.listen(5)
-            self.inputs = [self.sock_s]
 
         def exit(self):
+            """Clean up things before exiting."""
+
             try:
                 os.unlink(sock_file)
             except OSError:
@@ -240,7 +252,7 @@ class Clipster(object):
 
         def run(self):
             """Launch the clipboard manager daemon.
-            Watch for clipboard events, and client (socket) connections."""
+            Connect signals for clipboard events, and client (socket) connections."""
 
             # Set up socket, pid file etc
             self.prepare_files()
