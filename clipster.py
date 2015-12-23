@@ -16,20 +16,22 @@ sock_file = os.path.join(clipster_dir, "clipster_sock")
 hist_file = os.path.join(clipster_dir, "history")
 run_file = os.path.join(clipster_dir, "clipster.pid")
 max_input = 50000
+default_board = "PRIMARY"
+client_action = "BOARD"
 
 
 class Clipster(object):
     """Clipboard Manager."""
 
-    def client(self, signal):
+    def __init__(self, stdin):
+        self.stdin = stdin
+
+    def client(self, client_action, default_board):
         """Send a signal and (optional) data from STDIN to daemon socket."""
 
-        stdin = ""
-        if not sys.stdin.isatty():
-            if sys.stdin in select.select([sys.stdin],[],[],0)[0]:
-                stdin = sys.stdin.read()
-
-        message = "{0}:{1}".format(signal, stdin)
+        message = "{0}:{1}:{2}".format(client_action,
+                                       default_board,
+                                       self.stdin)
 
         sock_c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock_c.connect(sock_file)
@@ -51,30 +53,31 @@ class Clipster(object):
             if (event.keyval == Gdk.KEY_Escape):
                 self.window.hide()
 
-        def selection_handler(self, tree, treepath, treecol):
+        def selection_handler(self, tree, treepath, treecol, board):
             """Handler for selection widget 'select' event."""
 
             # Get selection
             model, treeiter = tree.get_selection().get_selected()
             data = model[treeiter][0]
-            self.update_board("PRIMARY", data)
+            self.update_board(board, data)
             model.clear()
             self.window.hide()
 
-        def selection_widget(self):
+        def selection_widget(self, board):
             self.window = Gtk.Window(title="Clipster")
             model = Gtk.ListStore(str)
-            for item in self.boards["PRIMARY"][::-1]:
+            for item in self.boards[board][::-1]:
                 model.append([item])
 
             tree = Gtk.TreeView(model)
 
             renderer = Gtk.CellRendererText()
-            column = Gtk.TreeViewColumn("Select from clipboard:", renderer, text=0)
+            column = Gtk.TreeViewColumn("{0} clipboard:".format(board),
+                                        renderer, text=0)
             tree.append_column(column)
             self.window.connect("key-press-event", self.keypress_handler)
             # Row is clicked on, or enter pressed
-            tree.connect("row-activated", self.selection_handler)
+            tree.connect("row-activated", self.selection_handler, board)
 
             self.window.add(tree)
             self.window.show_all()
@@ -262,7 +265,12 @@ class Clipster(object):
 
 if __name__ == "__main__":
 
-    clipster = Clipster()
+    stdin = ""
+    if not sys.stdin.isatty():
+        if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+            stdin = sys.stdin.read()
+
+    clipster = Clipster(stdin=stdin)
 
     parser = argparse.ArgumentParser(description='Clipster clipboard manager.')
     parser.add_argument('-p', '--primary', action="store_true", help="Write STDIN to the PRIMARY clipboard.")
@@ -274,11 +282,13 @@ if __name__ == "__main__":
 
     if args.daemon:
         clipster.Daemon().run()
-    elif args.primary:
-        clipster.client("PRIMARY")
+
+    if args.select:
+        client_action = "SELECT"
+
+    if args.primary:
+        default_board = "PRIMARY"
     elif args.clipboard:
-        clipster.client("CLIPBOARD")
-    elif args.select:
-        clipster.client("SELECT")
-    else:
-        parser.print_help()
+        default_board = "CLIPBOARD"
+
+    clipster.client(client_action, default_board)
