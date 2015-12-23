@@ -38,7 +38,6 @@ class Clipster(object):
         sock_c.sendall(message)
         sock_c.close()
 
-
     class Daemon(object):
         def __init__(self):
             """Set up clipboard objects and history dict."""
@@ -129,9 +128,8 @@ class Clipster(object):
             # FIXME: Emacs does this with ctrl-space + kb movement.
             # How to deal with this?
             # Something to do with change-owner always being same owner?
-            devs = self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER)
             mouse = None
-            for dev in devs:
+            for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
                 if dev.get_source() == Gdk.InputSource.MOUSE:
                     mouse = dev
                     break
@@ -146,7 +144,6 @@ class Clipster(object):
             # Unblock event handling
             board.handler_unblock(event_id)
             return text
-
 
         def socket_listen(self, sock_s, g_flags):
             conn, _ = sock_s.accept()
@@ -166,24 +163,25 @@ class Clipster(object):
                     break
             if data:
                 sent = ''.join(data)
-                signal, content = sent.split(':', 1)
+                signal, board, content = sent.split(':', 2)
                 if signal == "SELECT":
-                    self.selection_widget()
-                elif signal == "PRIMARY" or signal == "CLIPBOARD":
+                    self.selection_widget(board)
+                elif signal == "BOARD":
                     if content:
-                        self.update_board(signal, content)
+                        self.update_board(board, content)
             conn.close()
             return True
 
         def prepare_files(self):
-            """Ensure that all files and sockets used by the daemon are available."""
+            """Ensure that all files and sockets used
+            by the daemon are available."""
 
             # check for existing run_file, and tidy up if appropriate
             try:
                 with open(run_file, 'r') as runf_r:
                     pid = int(runf_r.read())
                     try:
-                        # Will do nothing, but raise an error if no such process
+                        # Do nothing, but raise an error if no such process
                         os.kill(pid, 0)
                         print("Daemon already running: pid {0}".format(pid))
                         sys.exit(1)
@@ -192,10 +190,10 @@ class Clipster(object):
                             os.unlink(run_file)
                         except IOError as exc:
                             if exc.errno == errno.ENOENT:
-                               # File already gone
-                              pass
+                                # File already gone
+                                pass
                             else:
-                               raise
+                                raise
             except IOError as exc:
                 if exc.errno == errno.ENOENT:
                     pass
@@ -247,8 +245,9 @@ class Clipster(object):
             # Set up socket, pid file etc
             self.prepare_files()
 
-            # We need to get the display instance from the window to call get_pointer()
-            # POPUP windows can do this without having to first 'show()' the window
+            # We need to get the display instance from the window
+            # for use in obtaining mouse state.
+            # POPUP windows can do this without having to first show the window
             self.window = Gtk.Window(type=Gtk.WindowType.POPUP)
 
             # Handle clipboard changes
@@ -262,7 +261,6 @@ class Clipster(object):
             Gtk.main()
 
 
-
 if __name__ == "__main__":
 
     stdin = ""
@@ -273,13 +271,18 @@ if __name__ == "__main__":
     clipster = Clipster(stdin=stdin)
 
     parser = argparse.ArgumentParser(description='Clipster clipboard manager.')
-    parser.add_argument('-p', '--primary', action="store_true", help="Write STDIN to the PRIMARY clipboard.")
-    parser.add_argument('-c', '--clipboard', action="store_true", help="Write STDIN to the CLIPBOARD clipboard.")
-    parser.add_argument('-d', '--daemon', action="store_true", help="Launch the daemon.")
-    parser.add_argument('-s', '--select', action="store_true", help="Launch the clipboard history selection window.")
+    parser.add_argument('-p', '--primary', action="store_true",
+                        help="Write STDIN to the PRIMARY clipboard.")
+    parser.add_argument('-c', '--clipboard', action="store_true",
+                        help="Write STDIN to the CLIPBOARD clipboard.")
+    parser.add_argument('-d', '--daemon', action="store_true",
+                        help="Launch the daemon.")
+    parser.add_argument('-s', '--select', action="store_true",
+                        help="Launch the clipboard history selection window.")
 
     args = parser.parse_args()
 
+    # Launch the daemon
     if args.daemon:
         clipster.Daemon().run()
 
