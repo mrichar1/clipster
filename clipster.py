@@ -12,46 +12,45 @@ import os
 import errno
 import sys
 import select
-
-# FIXME: use ConfigParser or similar
-clipster_dir = os.path.join(os.environ.get('HOME'), ".clipster")
-sock_file = os.path.join(clipster_dir, "clipster_sock")
-hist_file = os.path.join(clipster_dir, "history")
-run_file = os.path.join(clipster_dir, "clipster.pid")
-max_input = 50000
-default_board = "PRIMARY"
-client_action = "BOARD"
+try:
+    # py 3.x
+    import configparser
+except ImportError:
+    # py 2.x
+    import ConfigParser as configparser
 
 
 class Clipster(object):
     """Clipboard Manager."""
 
-    def __init__(self, stdin):
+    def __init__(self, config, stdin):
         self.stdin = stdin
 
-    def client(self, client_action, default_board):
+    def client(self, client_action):
         """Send a signal and (optional) data from STDIN to daemon socket."""
 
         message = "{0}:{1}:{2}".format(client_action,
-                                       default_board,
+                                       config.get('clipster', 'default_board'),
                                        self.stdin)
 
         sock_c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock_c.connect(sock_file)
+        sock_c.connect(config.get('clipster', "socket_file"))
         sock_c.sendall(message.encode('utf-8'))
         sock_c.close()
 
     class Daemon(object):
         """Handles clipboard events, client requests, stores history."""
 
-        def __init__(self):
+        def __init__(self, config):
             """Set up clipboard objects and history dict."""
+            self.window = self.p_id = self.c_id = self.sock_s = None
+            self.sock_file = config.get('clipster', 'socket_file')
             self.primary = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
             self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
             self.boards = {"PRIMARY": [], "CLIPBOARD": []}
-            self.window = None
-            self.p_id = self.c_id = None
-            self.sock_s = None
+            self.hist_file = config.get('clipster', 'history_file')
+            self.run_file = config.get('clipster', 'run_file')
+            self.max_input = config.getint('clipster', 'max_input')
 
         def keypress_handler(self, widget, event):
             """Handler for selection_widget keypress events."""
@@ -93,7 +92,7 @@ class Clipster(object):
         def read_history_file(self):
             """Read clipboard history from file."""
             try:
-                with open(hist_file, 'r') as hist_f:
+                with open(self.hist_file, 'r') as hist_f:
                     self.boards.update(json.load(hist_f))
             except IOError as exc:
                 if exc.errno == errno.ENOENT:
@@ -103,7 +102,7 @@ class Clipster(object):
         def write_history_file(self):
             """Write clipboard history to file."""
 
-            with open(hist_file, 'w') as hist_f:
+            with open(self.hist_file, 'w') as hist_f:
                 json.dump(self.boards, hist_f)
 
         def update_board(self, board, data):
@@ -168,7 +167,7 @@ class Clipster(object):
                         break
                     data.append(recv.decode('utf-8'))
                     recv_total += len(recv)
-                    if recv_total > max_input:
+                    if recv_total > self.max_input:
                         break
                 except socket.error:
                     break
@@ -189,7 +188,7 @@ class Clipster(object):
 
             # check for existing run_file, and tidy up if appropriate
             try:
-                with open(run_file, 'r') as runf_r:
+                with open(self.run_file, 'r') as runf_r:
                     pid = int(runf_r.read())
                     try:
                         # Do nothing, but raise an error if no such process
@@ -198,7 +197,7 @@ class Clipster(object):
                         sys.exit(1)
                     except OSError:
                         try:
-                            os.unlink(run_file)
+                            os.unlink(self.run_file)
                         except IOError as exc:
                             if exc.errno == errno.ENOENT:
                                 # File already gone
@@ -210,7 +209,7 @@ class Clipster(object):
                     pass
 
             # Create pid file
-            with open(run_file, 'w') as runf_w:
+            with open(self.run_file, 'w') as runf_w:
                 runf_w.write(str(os.getpid()))
 
             # Create the clipster dir if necessary
@@ -226,27 +225,27 @@ class Clipster(object):
 
             # Create the socket
             try:
-                os.unlink(sock_file)
+                os.unlink(self.sock_file)
             except OSError as exc:
                 if exc.errno == errno.ENOENT:
                     pass
 
             self.sock_s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.sock_s.setblocking(0)
-            self.sock_s.bind(sock_file)
+            self.sock_s.bind(self.sock_file)
             self.sock_s.listen(5)
 
         def exit(self):
             """Clean up things before exiting."""
 
             try:
-                os.unlink(sock_file)
+                os.unlink(self.sock_file)
             except OSError:
-                print("Warning: Failed to remove socket file: {0}".format(sock_file))
+                print("Warning: Failed to remove socket file: {0}".format(self.sock_file))
             try:
-                os.unlink(run_file)
+                os.unlink(self.run_file)
             except OSError:
-                print("Warning:Failed to remove run file: {0}".format(run_file))
+                print("Warning:Failed to remove run file: {0}".format(self.run_file))
             self.write_history_file()
             sys.exit(0)
 
@@ -275,14 +274,14 @@ class Clipster(object):
 
 if __name__ == "__main__":
 
-    stdin = ""
-    if not sys.stdin.isatty():
-        if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-            stdin = sys.stdin.read()
-
-    clipster = Clipster(stdin=stdin)
+    # Set a default config file
+    clipster_dir = os.path.join(os.environ.get('HOME'), ".clipster")
+    config_file = os.path.join(clipster_dir, "config")
 
     parser = argparse.ArgumentParser(description='Clipster clipboard manager.')
+    parser.add_argument('-f', '--config', action="store",
+                        default=config_file,
+                        help="Path to config file.")
     parser.add_argument('-p', '--primary', action="store_true",
                         help="Write STDIN to the PRIMARY clipboard.")
     parser.add_argument('-c', '--clipboard', action="store_true",
@@ -294,16 +293,49 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # Set some config defaults
+    config_defaults = {"clipster_dir": clipster_dir,
+                       "default_board": "PRIMARY",
+                       "history_file": "%(clipster_dir)s/history",
+                       "socket_file": "%(clipster_dir)s/clipster_sock",
+                       "run_file":  "%(clipster_dir)s/clipster.pid",
+                       "max_input": "50000",}
+
+    config = configparser.SafeConfigParser(config_defaults)
+    config.add_section('clipster')
+
+    # If a config file arg is passed in, try reading it
+    if args.config:
+        config.read(args.config)
+    else:
+        # Try reading the config file from the defauilt dir
+        config.read(config_file)
+
+    # Override clipdir, if it's an option in the config file
+    try:
+        clipdir = config.get('clipster', 'clipster_dir')
+    except configparser.Error:
+        # Otherwise, set the value back into the config
+        config.set('clipster', 'clipster_dir', clipdir)
+
+    stdin = ""
+    if not sys.stdin.isatty():
+        if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+            stdin = sys.stdin.read()
+
+    clipster = Clipster(config, stdin)
+
     # Launch the daemon
     if args.daemon:
-        clipster.Daemon().run()
+        clipster.Daemon(config).run()
 
+    client_action = "BOARD"
     if args.select:
         client_action = "SELECT"
 
     if args.primary:
-        default_board = "PRIMARY"
+        config.set('clipster', 'default_board', 'PRIMARY')
     elif args.clipboard:
-        default_board = "CLIPBOARD"
+        config.set('clipster', 'default_board', 'CLIPBOARD')
 
-    clipster.client(client_action, default_board)
+    clipster.client(client_action)
