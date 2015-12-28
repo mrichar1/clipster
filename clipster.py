@@ -71,22 +71,33 @@ class Clipster(object):
         def selection_widget(self, board):
             """GUI window for selecting items from clipboard history."""
 
-            self.window = Gtk.Window(title="Clipster")
+            self.window = Gtk.Dialog(title="Clipster")
+            self.window.set_size_request(500,500)
+
+            scrolled = Gtk.ScrolledWindow()
+
             model = Gtk.ListStore(str)
             for item in self.boards[board][::-1]:
                 model.append([item])
 
             tree = Gtk.TreeView(model)
 
+            # Allow alternating color for rows, if WM theme supports it
+            tree.set_rules_hint(True)
+
             renderer = Gtk.CellRendererText()
             column = Gtk.TreeViewColumn("{0} clipboard:".format(board),
                                         renderer, text=0)
             tree.append_column(column)
+            # Handle keypresses (looking for escape key)
             self.window.connect("key-press-event", self.keypress_handler)
             # Row is clicked on, or enter pressed
             tree.connect("row-activated", self.selection_handler, board)
 
-            self.window.add(tree)
+            scrolled.add(tree)
+            # GtkDialog comes with a vbox already active, so pack into this
+            self.window.vbox.pack_start(scrolled, True, True, 0)
+
             self.window.show_all()
 
         def read_history_file(self):
