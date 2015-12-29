@@ -67,7 +67,8 @@ class Clipster(object):
 
             # Get selection
             model, treeiter = tree.get_selection().get_selected()
-            data = model[treeiter][0]
+            # Select full text from row
+            data = model[treeiter][1]
             self.update_board(board, data)
             model.clear()
             self.window.hide()
@@ -75,33 +76,45 @@ class Clipster(object):
         def selection_widget(self, board):
             """GUI window for selecting items from clipboard history."""
 
-            self.window = Gtk.Dialog(title="Clipster")
-            self.window.set_size_request(500,500)
-
+            # Create windows & widgets
+            # Gtk complains about dialogs with no parents, so create one
+            rootwin = Gtk.Window()
+            self.window = Gtk.Dialog(title="Clipster", parent=rootwin)
             scrolled = Gtk.ScrolledWindow()
-
-            model = Gtk.ListStore(str)
-            for item in self.boards[board][::-1]:
-                model.append([item])
-
+            model = Gtk.ListStore(str, str)
             tree = Gtk.TreeView(model)
-
-            # Allow alternating color for rows, if WM theme supports it
-            tree.set_rules_hint(True)
-
             renderer = Gtk.CellRendererText()
             column = Gtk.TreeViewColumn("{0} clipboard:".format(board),
-                                        renderer, text=0)
-            tree.append_column(column)
+                                        renderer, markup=0)
+
+            # Add rows to the model
+            for item in self.boards[board][::-1]:
+                label = item
+                row_height = self.config.getint('clipster', 'row_height')
+                trunc = ""
+                lines = item.splitlines(True)
+                if len(lines) > row_height:
+                    trunc = "<b><i>({0} more lines)</i></b>".format(len(lines) - row_height)
+                label = "{0}{1}".format(''.join(lines[:row_height]), trunc)
+                # Add label and full text to model
+                model.append([label, item])
+
             # Handle keypresses (looking for escape key)
             self.window.connect("key-press-event", self.keypress_handler)
             # Row is clicked on, or enter pressed
             tree.connect("row-activated", self.selection_handler, board)
 
+            # Format, connect and show windows
+            # Allow alternating color for rows, if WM theme supports it
+            tree.set_rules_hint(True)
+            # Draw horizontal divider lines between rows
+            tree.set_grid_lines(Gtk.TreeViewGridLines.HORIZONTAL)
+
+            tree.append_column(column)
             scrolled.add(tree)
             # GtkDialog comes with a vbox already active, so pack into this
             self.window.vbox.pack_start(scrolled, True, True, 0)
-
+            self.window.set_size_request(500, 500)
             self.window.show_all()
 
         def read_history_file(self):
@@ -318,7 +331,8 @@ def main():
                        "history_file": "%(clipster_dir)s/history",
                        "socket_file": "%(clipster_dir)s/clipster_sock",
                        "pid_file":  "%(clipster_dir)s/clipster.pid",
-                       "max_input": "50000",}  # max length of selection input
+                       "max_input": "50000",  # max length of selection input
+                       "row_height": "3"}  # num rows to show in widget
 
     config = configparser.SafeConfigParser(config_defaults)
     config.add_section('clipster')
