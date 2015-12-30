@@ -39,7 +39,11 @@ class Clipster(object):
                                        self.stdin)
 
         sock_c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock_c.connect(self.config.get('clipster', "socket_file"))
+        try:
+            sock_c.connect(self.config.get('clipster', "socket_file"))
+        except socket.error:
+            print("Error connecting to daemon socket. Is daemon running?")
+            sys.exit(1)
         sock_c.sendall(message.encode('utf-8'))
         sock_c.close()
 
