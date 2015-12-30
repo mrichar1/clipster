@@ -6,7 +6,7 @@ Clipster has 2 modes of operation - `daemon`, which handles clipboard events and
 
 ## Installation
 
-You will need the python bindings for the gobject introspection libraries. These are provded by the `python-gi` package on debian-based systems.
+You will need the python bindings for the gobject introspection libraries. These are provded by the `python-gi` package on debian-based systems, or by the `pygobject3` package on redhat-based systems.
 
 To install Clipster, simply download the clipster script from this repository and save it somewhere in your path.
 
