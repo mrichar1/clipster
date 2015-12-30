@@ -386,13 +386,10 @@ def main():
     config = configparser.SafeConfigParser(config_defaults)
     config.add_section('clipster')
 
-    # If a config file arg is passed in, try reading it
+    # Try to read config file (either passed in, or default value)
     if args.config:
         logging.debug("Trying to read config file: {0}".format(args.config))
         config.read(args.config)
-    else:
-        # Try reading the config file from the defauilt dir
-        config.read(config_file)
 
     logging.debug("Merged config: {0}".format(sorted(dict(config.items('clipster')).items())))
 
