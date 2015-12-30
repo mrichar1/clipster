@@ -45,7 +45,18 @@ class Clipster(object):
             print("Error connecting to daemon socket. Is daemon running?")
             sys.exit(1)
         sock_c.sendall(message.encode('utf-8'))
+        data = []
+        while True:
+            try:
+                recv = sock_c.recv(8192)
+                if not recv:
+                    break
+                data.append(recv.decode('utf-8'))
+            except socket.error:
+                break
         sock_c.close()
+        if data:
+            print(''.join(data), end='')
 
     class Daemon(object):
         """Handles clipboard events, client requests, stores history."""
@@ -214,6 +225,8 @@ class Clipster(object):
                 elif sig == "BOARD":
                     if content:
                         self.update_board(board, content)
+                    else:
+                        conn.sendall(self.boards[board][-1])
             conn.close()
             return True
 
@@ -322,9 +335,9 @@ def main():
                         default=config_file,
                         help="Path to config file.")
     parser.add_argument('-p', '--primary', action="store_true",
-                        help="Write STDIN to the PRIMARY clipboard.")
+                        help="Query, or write STDIN to, the PRIMARY clipboard.")
     parser.add_argument('-c', '--clipboard', action="store_true",
-                        help="Write STDIN to the CLIPBOARD clipboard.")
+                        help="Query, or write STDIN to, the CLIPBOARD clipboard.")
     parser.add_argument('-d', '--daemon', action="store_true",
                         help="Launch the daemon.")
     parser.add_argument('-s', '--select', action="store_true",
