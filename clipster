@@ -12,6 +12,7 @@ import os
 import errno
 import sys
 import select
+import logging
 try:
     # py 3.x
     import configparser
@@ -38,17 +39,20 @@ class Clipster(object):
                                                        'default_selection'),
                                        self.stdin)
 
+        logging.debug("Connecting to server socket.")
         sock_c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             sock_c.connect(self.config.get('clipster', "socket_file"))
         except socket.error:
-            print("Error connecting to daemon socket. Is daemon running?")
+            logging.error("Error connecting to daemon socket. Is daemon running?")
             sys.exit(1)
+        logging.debug("Sending message: {0}".format(message))
         sock_c.sendall(message.encode('utf-8'))
         data = []
         while True:
             try:
                 recv = sock_c.recv(8192)
+                logging.debug("Received data from server.")
                 if not recv:
                     break
                 data.append(recv.decode('utf-8'))
@@ -148,6 +152,7 @@ class Clipster(object):
         def write_history_file(self):
             """Write clipboard history to file."""
 
+            logging.debug("Writing history to file.")
             with open(self.hist_file, 'w') as hist_f:
                 json.dump(self.boards, hist_f)
 
@@ -159,20 +164,25 @@ class Clipster(object):
         def update_history(self, board, text):
             """Update the in-memory clipboard history."""
 
+            logging.debug("Updating clipboard:{0}".format(board))
             if not self.config.getboolean('clipster', 'duplicates'):
                 # If an item already exists in the clipboard, remove it
                 if text in self.boards[board]:
+                    logging.debug("duplicate: removing.")
                     self.boards[board].remove(text)
             diff = self.config.getint('clipster', 'smart_update')
             for pos in range(1, diff+1):
                 if text[:-pos] == self.boards[board][-1] or text == self.boards[board][-1][:-pos]:
+                    logging.debug("smart-update: rremoving.")
                     # new selection is a longer/shorter version of previous
                     self.boards[board].pop()
             self.boards[board].append(text)
+            logging.debug(self.boards[board])
 
         def owner_change(self, board, event):
             """Handler for owner-change clipboard events."""
 
+            logging.debug("owner-change event!")
             selection = str(event.selection)
             if selection == "PRIMARY":
                 event_id = self.p_id
@@ -211,6 +221,7 @@ class Clipster(object):
             while True:
                 try:
                     recv = conn.recv(8192)
+                    logging.debug("Client connection received.")
                     if not recv:
                         break
                     data.append(recv.decode('utf-8'))
@@ -220,14 +231,21 @@ class Clipster(object):
                 except socket.error:
                     break
             if data:
+                logging.debug("Data received.")
                 sent = ''.join(data)
                 sig, board, content = sent.split(':', 2)
                 if sig == "SELECT":
+                    logging.debug("Received sig: SELECT")
+                    logging.debug("Received board: {0}".format(board))
                     self.selection_widget(board)
                 elif sig == "BOARD":
+                    logging.debug("Received sig: BOARD")
+                    logging.debug("Received board: {0}".format(board))
                     if content:
+                        logging.debug("Received content: {0}".format(content))
                         self.update_board(board, content)
                     else:
+                        logging.debug("Sending latest selection entry: {0}".format(self.boards[board][-1]))
                         conn.sendall(self.boards[board][-1].encode('utf-8'))
             conn.close()
             return True
@@ -243,7 +261,7 @@ class Clipster(object):
                     try:
                         # Do nothing, but raise an error if no such process
                         os.kill(pid, 0)
-                        print("Daemon already running: pid {0}".format(pid))
+                        logging.error("Daemon already running: pid {0}".format(pid))
                         sys.exit(1)
                     except OSError:
                         try:
@@ -288,14 +306,15 @@ class Clipster(object):
         def exit(self):
             """Clean up things before exiting."""
 
+            logging.debug("Daemon exiting...")
             try:
                 os.unlink(self.sock_file)
             except OSError:
-                print("Warning: Failed to remove socket file: {0}".format(self.sock_file))
+                logging.warning("Failed to remove socket file: {0}".format(self.sock_file))
             try:
                 os.unlink(self.pid_file)
             except OSError:
-                print("Warning: Failed to remove run file: {0}".format(self.pid_file))
+                logging.warning("Failed to remove run file: {0}".format(self.pid_file))
             self.write_history_file()
             sys.exit(0)
 
@@ -336,6 +355,8 @@ def main():
     parser.add_argument('-f', '--config', action="store",
                         default=config_file,
                         help="Path to config file.")
+    parser.add_argument('-l', '--log_level', action="store", default="INFO",
+                        help="Set log level: DEBUG, INFO (default), WARNING, ERROR, CRITICAL")
     parser.add_argument('-p', '--primary', action="store_true",
                         help="Query, or write STDIN to, the PRIMARY clipboard.")
     parser.add_argument('-c', '--clipboard', action="store_true",
@@ -346,6 +367,10 @@ def main():
                         help="Launch the clipboard history selection window.")
 
     args = parser.parse_args()
+
+    logging.basicConfig(format='%(levelname)s:%(message)s',
+                        level=getattr(logging, args.log_level.upper()))
+    logging.debug("Debugging Enabled.")
 
     # Set some config defaults
     config_defaults = {"clipster_dir": clipster_dir,  # clipster 'root' dir
@@ -363,10 +388,13 @@ def main():
 
     # If a config file arg is passed in, try reading it
     if args.config:
+        logging.debug("Trying to read config file: {0}".format(args.config))
         config.read(args.config)
     else:
         # Try reading the config file from the defauilt dir
         config.read(config_file)
+
+    logging.debug("Merged config: {0}".format(sorted(dict(config.items('clipster')).items())))
 
     # Override clipdir, if it's an option in the config file
     try:
