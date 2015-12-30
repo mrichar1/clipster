@@ -230,7 +230,7 @@ class Clipster(object):
                     if content:
                         self.update_board(board, content)
                     else:
-                        conn.sendall(self.boards[board][-1])
+                        conn.sendall(self.boards[board][-1].encode('utf-8'))
             conn.close()
             return True
 
