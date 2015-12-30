@@ -164,13 +164,11 @@ class Clipster(object):
                 if text in self.boards[board]:
                     self.boards[board].remove(text)
             diff = self.config.getint('clipster', 'smart_update')
-            print(repr(self.boards[board]))
             for pos in range(1, diff+1):
                 if text[:-pos] == self.boards[board][-1] or text == self.boards[board][-1][:-pos]:
                     # new selection is a longer/shorter version of previous
                     self.boards[board].pop()
             self.boards[board].append(text)
-            print(self.boards[board])
 
         def owner_change(self, board, event):
             """Handler for owner-change clipboard events."""
