@@ -380,8 +380,8 @@ def main():
                        "pid_file":  "%(clipster_dir)s/clipster.pid",
                        "max_input": "50000",  # max length of selection input
                        "row_height": "3",  # num rows to show in widget
-                       "duplicates": "no", # allow duplicates, or instead move the original entry to top
-                       "smart_update": "1"} # Replace rather than append is selection is similar to previous
+                       "duplicates": "no",  # allow duplicates, or instead move the original entry to top
+                       "smart_update": "1"}  # Replace rather than append is selection is similar to previous
 
     config = configparser.SafeConfigParser(config_defaults)
     config.add_section('clipster')
