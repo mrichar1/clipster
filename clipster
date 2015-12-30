@@ -23,9 +23,12 @@ except ImportError:
 class Clipster(object):
     """Clipboard Manager."""
 
-    def __init__(self, config, stdin):
+    def __init__(self, config):
         self.config = config
-        self.stdin = stdin
+        self.stdin = ""
+        if not sys.stdin.isatty():
+            if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+                self.stdin = sys.stdin.read()
 
     def client(self, client_action):
         """Send a signal and (optional) data from STDIN to daemon socket."""
@@ -351,12 +354,7 @@ def main():
         # Otherwise, set the value back into the config
         config.set('clipster', 'clipster_dir', clipdir)
 
-    stdin = ""
-    if not sys.stdin.isatty():
-        if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-            stdin = sys.stdin.read()
-
-    clipster = Clipster(config, stdin)
+    clipster = Clipster(config)
 
     # Launch the daemon
     if args.daemon:
