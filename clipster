@@ -68,7 +68,7 @@ class Clipster(object):
             self.sock_file = self.config.get('clipster', 'socket_file')
             self.primary = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
             self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-            self.boards = {"PRIMARY": [], "CLIPBOARD": []}
+            self.boards = {"PRIMARY": [""], "CLIPBOARD": [""]}
             self.hist_file = self.config.get('clipster', 'history_file')
             self.pid_file = self.config.get('clipster', 'pid_file')
             self.max_input = self.config.getint('clipster', 'max_input')
@@ -159,9 +159,16 @@ class Clipster(object):
         def update_history(self, board, text):
             """Update the in-memory clipboard history."""
 
-            # If an item already exists in the clipboard, remove it
-            if text in self.boards[board]:
-                self.boards[board].remove(text)
+            if not self.config.getboolean('clipster', 'duplicates'):
+                # If an item already exists in the clipboard, remove it
+                if text in self.boards[board]:
+                    self.boards[board].remove(text)
+            diff = self.config.getint('clipster', 'smart_update')
+            print(repr(self.boards[board]))
+            for pos in range(1, diff+1):
+                if text[:-pos] == self.boards[board][-1] or text == self.boards[board][-1][:-pos]:
+                    # new selection is a longer/shorter version of previous
+                    self.boards[board].pop()
             self.boards[board].append(text)
             print(self.boards[board])
 
@@ -179,9 +186,6 @@ class Clipster(object):
             # FIXME: this devs hack is a bit verbose. Look instead at
             # gdk_seat_get_pointer -> gdk_device_get_state
             # once GdkSeat is in stable
-            # FIXME: Emacs does this with ctrl-space + kb movement.
-            # How to deal with this?
-            # Something to do with change-owner always being same owner?
             mouse = None
             for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
                 if dev.get_source() == Gdk.InputSource.MOUSE:
@@ -352,7 +356,9 @@ def main():
                        "socket_file": "%(clipster_dir)s/clipster_sock",
                        "pid_file":  "%(clipster_dir)s/clipster.pid",
                        "max_input": "50000",  # max length of selection input
-                       "row_height": "3"}  # num rows to show in widget
+                       "row_height": "3",  # num rows to show in widget
+                       "duplicates": "no", # allow duplicates, or instead move the original entry to top
+                       "smart_update": "1"} # Replace rather than append is selection is similar to previous
 
     config = configparser.SafeConfigParser(config_defaults)
     config.add_section('clipster')
