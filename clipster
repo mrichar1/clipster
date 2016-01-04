@@ -173,7 +173,7 @@ class Clipster(object):
             diff = self.config.getint('clipster', 'smart_update')
             for pos in range(1, diff+1):
                 if text[:-pos] == self.boards[board][-1] or text == self.boards[board][-1][:-pos]:
-                    logging.debug("smart-update: rremoving.")
+                    logging.debug("smart-update: removing.")
                     # new selection is a longer/shorter version of previous
                     self.boards[board].pop()
             self.boards[board].append(text)
@@ -184,6 +184,7 @@ class Clipster(object):
 
             logging.debug("owner-change event!")
             selection = str(event.selection)
+            logging.debug("selection: {0}".format(selection))
             if selection == "PRIMARY":
                 event_id = self.p_id
             else:
