@@ -208,6 +208,9 @@ class Clipster(object):
             text = board.wait_for_text()
             if text:
                 self.update_history(selection, text)
+            else:
+                logging.debug("Selection released. Reinstating from history.")
+                self.update_board(selection, self.boards[selection][-1])
             # Unblock event handling
             board.handler_unblock(event_id)
             return text
