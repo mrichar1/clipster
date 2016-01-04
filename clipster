@@ -15,6 +15,7 @@ import errno
 import sys
 import select
 import logging
+import tempfile
 try:
     # py 3.x
     import configparser
@@ -157,8 +158,9 @@ class Clipster(object):
             """Write clipboard history to file."""
 
             logging.debug("Writing history to file.")
-            with open(self.hist_file, 'w') as hist_f:
-                json.dump(self.boards, hist_f)
+            tmp_fd, tmp_name = tempfile.mkstemp(dir=self.config.get('clipster', 'clipster_dir'))
+            os.write(tmp_fd, json.dumps(self.boards))
+            os.rename(tmp_name, self.hist_file)
 
         def update_board(self, board, data):
             """Update a clipboard."""
