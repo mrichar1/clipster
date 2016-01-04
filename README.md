@@ -136,3 +136,13 @@ exec --no-startup-id clipster -d
 bindsym $mod+c exec clipster -sp
 
 ```
+
+## Bugs & Improvements
+
+I'm happy to receive any bug reports, pull requests, suggestions for features or other improvements - with the following caveats:
+
+* Clipster should remain driven by the command-line and keyboard - no GUI-only or mouse-only features.
+
+* No extra 3rd party dependencies (unless they are ones found in the core of most distros).
+
+* No requirement for packaging for installation (I'm happy to accept specfiles, debian packaging files etc - but you must always be able to just download and run Clipster if you want).
