@@ -115,10 +115,10 @@ class Clipster(object):
 
             # Add rows to the model
             for item in self.boards[board][::-1]:
-                label = item
+                label = GLib.markup_escape_text(item)
                 row_height = self.config.getint('clipster', 'row_height')
                 trunc = ""
-                lines = item.splitlines(True)
+                lines = label.splitlines(True)
                 if len(lines) > row_height:
                     trunc = "<b><i>({0} more lines)</i></b>".format(len(lines) - row_height)
                 label = "{0}{1}".format(''.join(lines[:row_height]), trunc)
