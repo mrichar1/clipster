@@ -170,6 +170,11 @@ class Clipster(object):
 
             logging.debug("Updating clipboard:{0}".format(board))
             if not self.config.getboolean('clipster', 'duplicates'):
+                try:
+                    # Needed for unicode comparisons - see issue #1
+                    text = text.decode('utf-8')
+                except (UnicodeDecodeError, AttributeError):
+                    pass
                 # If an item already exists in the clipboard, remove it
                 if text in self.boards[board]:
                     logging.debug("duplicate: removing.")
