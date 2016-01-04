@@ -2,6 +2,8 @@
 
 """Clipster - Clipboard manager."""
 
+# pylint: disable=line-too-long
+
 from __future__ import print_function
 from gi.repository import Gtk, Gdk, GLib, GObject
 import signal
@@ -64,6 +66,8 @@ class Clipster(object):
 
     class Daemon(object):
         """Handles clipboard events, client requests, stores history."""
+
+        # pylint: disable=too-many-instance-attributes
 
         def __init__(self, config):
             """Set up clipboard objects and history dict."""
