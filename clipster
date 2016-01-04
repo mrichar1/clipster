@@ -334,7 +334,10 @@ class Clipster(object):
                 os.unlink(self.pid_file)
             except OSError:
                 logging.warning("Failed to remove run file: {0}".format(self.pid_file))
-            self.write_history_file()
+            try:
+                self.write_history_file()
+            except OSError:
+                logging.warning("Failed to upodate history file: {0}".format(self.hist_file))
             sys.exit(0)
 
         def run(self):
