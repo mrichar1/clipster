@@ -120,3 +120,19 @@ To launch the clipboard selection dialog box:
 The dialog box can be used to select an item from the clipboard history - either `Arrow Keys` and `Return` or mouse (double-click) can be used to select an item. Pressing `Esc` will close the dialog.
 
 Items containing multiple lines will be truncated based on the `row_height` config value.
+
+
+## WM Integration
+
+It's easy to integrate clipster into an existing window manager by binding clipster commands to keyboard shortcuts.
+
+For example, in i3 (my WM of choice) I have the following in my .i3/config file:
+
+```
+# Start clipster daemon
+exec --no-startup-id clipster -d
+
+# shortcut to selection widget (primary)
+bindsym $mod+c exec clipster -sp
+
+```
