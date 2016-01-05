@@ -366,11 +366,10 @@ class Clipster(object):
             Gtk.main()
 
 
-def main():
-    """Start the application."""
+def parse_args(clipster_dir):
+    """Parse command-line arguments."""
 
     # Set a default config file
-    clipster_dir = os.path.join(os.environ.get('HOME'), ".clipster")
     config_file = os.path.join(clipster_dir, "config")
 
     parser = argparse.ArgumentParser(description='Clipster clipboard manager.')
@@ -388,11 +387,11 @@ def main():
     parser.add_argument('-s', '--select', action="store_true",
                         help="Launch the clipboard history selection window.")
 
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    logging.basicConfig(format='%(levelname)s:%(message)s',
-                        level=getattr(logging, args.log_level.upper()))
-    logging.debug("Debugging Enabled.")
+
+def parse_config(args, clipster_dir):
+    """Configuration derived from defaults & file."""
 
     # Set some config defaults
     config_defaults = {"clipster_dir": clipster_dir,  # clipster 'root' dir
@@ -421,6 +420,25 @@ def main():
     except configparser.Error:
         # Otherwise, set the value back into the config
         config.set('clipster', 'clipster_dir', clipdir)
+
+    return config
+
+
+def main():
+    """Start the application."""
+
+    # Set a default directory for clipster files
+    clipster_dir = os.path.join(os.environ.get('HOME'), ".clipster")
+
+    # Parse command-line arguments
+    args = parse_args(clipster_dir)
+
+    # Enable logging
+    logging.basicConfig(format='%(levelname)s:%(message)s',
+                        level=getattr(logging, args.log_level.upper()))
+    logging.debug("Debugging Enabled.")
+
+    config = parse_config(args, clipster_dir)
 
     clipster = Clipster(config)
 
