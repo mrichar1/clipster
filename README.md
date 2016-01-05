@@ -15,8 +15,8 @@ To install Clipster, simply download the clipster script from this repository an
 
 ### Command-line options
 
-``` bash
-~$ ./clipster -h
+```
+~$ clipster -h
 usage: clipster [-h] [-f CONFIG] [-p] [-c] [-d] [-s]
 
 Clipster clipboard manager.
@@ -25,6 +25,9 @@ optional arguments:
   -h, --help            show this help message and exit
   -f CONFIG, --config CONFIG
                         Path to config file.
+  -l LOG_LEVEL, --log_level LOG_LEVEL
+                        Set log level: DEBUG, INFO (default), WARNING, ERROR,
+                        CRITICAL
   -p, --primary         Query, or write STDIN to, the PRIMARY clipboard.
   -c, --clipboard       Query, or write STDIN to, the CLIPBOARD clipboard.
   -d, --daemon          Launch the daemon.
@@ -32,11 +35,10 @@ optional arguments:
 
 ```
 
-Clipster looks for its configuration file (and other resources) in `$HOME/.clipster` by default. This can be changed by providing a different config file on the command-line, using the -f argument.
 
 ### Config file
 
-Clipster expects its config file to be in $HOME/.clipster by default, but this can be changed using the `-f` option.
+Clipster looks for its configuration file (and other resources) in `$HOME/.clipster` by default, but this can be changed using the `-f` option.
 
 The config options, and their default values, are shown below. Note the `%()s` syntax can be used to re-use an existing config option's value elsewhere.
 
@@ -91,6 +93,12 @@ The first step is to launch the Clipster daemon:
 ```
 
 This can be run as a background task on session start.
+
+For debugging, use the `-l` option:
+
+``` bash
+~$ clipster -d -l DEBUG
+```
 
 ### Using the client
 
