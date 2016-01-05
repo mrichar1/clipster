@@ -159,7 +159,7 @@ class Clipster(object):
 
             logging.debug("Writing history to file.")
             tmp_fd, tmp_name = tempfile.mkstemp(dir=self.config.get('clipster', 'clipster_dir'))
-            os.write(tmp_fd, json.dumps(self.boards))
+            os.write(tmp_fd, json.dumps(self.boards).encode('utf-8'))
             os.rename(tmp_name, self.hist_file)
 
         def update_board(self, board, data):
