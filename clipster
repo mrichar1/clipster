@@ -160,7 +160,10 @@ class Clipster(object):
 
             logging.debug("Writing history to file.")
             tmp_fd, tmp_name = tempfile.mkstemp(dir=self.config.get('clipster', 'clipster_dir'))
-            os.write(tmp_fd, json.dumps(self.boards).encode('utf-8'))
+            # Limit history file to contain last 'history_size' items
+            limit = self.config.getint('clipster', 'history_size')
+            hist = {x: y[-limit:] for x, y in self.boards.items()}
+            os.write(tmp_fd, json.dumps(hist).encode('utf-8'))
             os.rename(tmp_name, self.hist_file)
 
         def update_board(self, board, data):
@@ -424,6 +427,7 @@ def parse_config(args, clipster_dir):
     config_defaults = {"clipster_dir": clipster_dir,  # clipster 'root' dir
                        "default_selection": "PRIMARY",  # PRIMARY or CLIPBOARD
                        "history_file": "%(clipster_dir)s/history",
+                       "history_size": "200",  # Number of items to be saved in the history file (for each selection)
                        "socket_file": "%(clipster_dir)s/clipster_sock",
                        "pid_file":  "%(clipster_dir)s/clipster.pid",
                        "max_input": "50000",  # max length of selection input

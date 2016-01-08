@@ -54,7 +54,11 @@ clipster_dir = /path/to/clipster/resources
 default_selection = PRIMARY
 
 # full path to the clipster history file (JSON)
+# Maximum file size is: 'history_size * max_input * 2' (defaults: 10MB)
 history_file = %(clipster_dir)s/history
+
+# Number of items to save in the history file for each selection.
+history_size = 200
 
 # Full path to the clipster socket file
 socket_file = %(clipster_dir)s/clipster_sock
@@ -65,7 +69,7 @@ pid_file = %(clipster_dir)s/clipster.pid
 # Maximum length for new clipboard items
 max_input = 50000
 
-# Number of rows of clipboard content to show in the selectionwidget before truncating
+# Number of rows of clipboard content to show in the selection widget before truncating
 # Set to a high number to avoid truncation
 row_height = 3
 
