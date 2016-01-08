@@ -48,9 +48,9 @@ class Clipster(object):
         try:
             sock_c.connect(self.config.get('clipster', "socket_file"))
         except socket.error:
-            logging.error("Error connecting to daemon socket. Is daemon running?")
+            logging.error("Error connecting to socket. Is daemon running?")
             sys.exit(1)
-        logging.debug("Sending message: {0}".format(message))
+        logging.debug("Sending message: %s", message)
         sock_c.sendall(message.encode('utf-8'))
         data = []
         while True:
@@ -182,7 +182,7 @@ class Clipster(object):
         def update_history(self, board, text):
             """Update the in-memory clipboard history."""
 
-            logging.debug("Updating clipboard:{0}".format(board))
+            logging.debug("Updating clipboard: %s", board)
 
             try:
                 # Needed for unicode comparisons - see issue #1
@@ -225,7 +225,7 @@ class Clipster(object):
 
             logging.debug("owner-change event!")
             selection = str(event.selection)
-            logging.debug("selection: {0}".format(selection))
+            logging.debug("selection: %s", selection)
             if selection == "PRIMARY":
                 event_id = self.p_id
             else:
@@ -283,18 +283,17 @@ class Clipster(object):
                 logging.debug("Data received.")
                 sent = ''.join(data)
                 sig, board, content = sent.split(':', 2)
+                logging.debug("Received sig: %s", sig)
+                logging.debug("Received board: %s", board)
                 if sig == "SELECT":
-                    logging.debug("Received sig: SELECT")
-                    logging.debug("Received board: {0}".format(board))
                     self.selection_widget(board)
                 elif sig == "BOARD":
-                    logging.debug("Received sig: BOARD")
-                    logging.debug("Received board: {0}".format(board))
                     if content:
-                        logging.debug("Received content: {0}".format(content))
+                        logging.debug("Received content: %s", content)
                         self.update_board(board, content)
                     else:
-                        logging.debug("Sending latest selection entry: {0}".format(self.boards[board][-1]))
+                        logging.debug("Sending latest selection entry: %s",
+                                      self.boards[board][-1])
                         conn.sendall(self.boards[board][-1].encode('utf-8'))
             conn.close()
             return True
@@ -310,7 +309,7 @@ class Clipster(object):
                     try:
                         # Do nothing, but raise an error if no such process
                         os.kill(pid, 0)
-                        logging.error("Daemon already running: pid {0}".format(pid))
+                        logging.error("Daemon already running: pid %s", pid)
                         sys.exit(1)
                     except OSError:
                         try:
@@ -359,15 +358,15 @@ class Clipster(object):
             try:
                 os.unlink(self.sock_file)
             except OSError:
-                logging.warning("Failed to remove socket file: {0}".format(self.sock_file))
+                logging.warning("Failed to remove socket file: %s", self.sock_file)
             try:
                 os.unlink(self.pid_file)
             except OSError:
-                logging.warning("Failed to remove run file: {0}".format(self.pid_file))
+                logging.warning("Failed to remove run file: %s", self.pid_file)
             try:
                 self.write_history_file()
             except OSError:
-                logging.warning("Failed to upodate history file: {0}".format(self.hist_file))
+                logging.warning("Failed to upodate history file: %s", self.hist_file)
             sys.exit(0)
 
         def run(self):
@@ -442,10 +441,11 @@ def parse_config(args, clipster_dir):
 
     # Try to read config file (either passed in, or default value)
     if args.config:
-        logging.debug("Trying to read config file: {0}".format(args.config))
+        logging.debug("Trying to read config file: %s", args.config)
         config.read(args.config)
 
-    logging.debug("Merged config: {0}".format(sorted(dict(config.items('clipster')).items())))
+    logging.debug("Merged config: %s",
+                  sorted(dict(config.items('clipster')).items()))
 
     # Override clipdir, if it's an option in the config file
     try:
