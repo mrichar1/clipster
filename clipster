@@ -16,6 +16,7 @@ import sys
 import select
 import logging
 import tempfile
+import re
 try:
     # py 3.x
     import configparser
@@ -167,26 +168,52 @@ class Clipster(object):
 
             getattr(self, board.lower()).set_text(data, -1)
 
+        def de_duplicate(self, board, text):
+            """If an text already exists in the clipboard, remove it."""
+
+            if not self.config.getboolean('clipster', 'duplicates'):
+                if text in self.boards[board]:
+                    logging.debug("duplicate: removing.")
+                    self.boards[board].remove(text)
+
         def update_history(self, board, text):
             """Update the in-memory clipboard history."""
 
             logging.debug("Updating clipboard:{0}".format(board))
-            if not self.config.getboolean('clipster', 'duplicates'):
-                try:
-                    # Needed for unicode comparisons - see issue #1
-                    text = text.decode('utf-8')
-                except (UnicodeDecodeError, AttributeError):
-                    pass
-                # If an item already exists in the clipboard, remove it
-                if text in self.boards[board]:
-                    logging.debug("duplicate: removing.")
-                    self.boards[board].remove(text)
+
+            try:
+                # Needed for unicode comparisons - see issue #1
+                text = text.decode('utf-8')
+            except (UnicodeDecodeError, AttributeError):
+                pass
+
+            self.de_duplicate(board, text)
             diff = self.config.getint('clipster', 'smart_update')
             for pos in range(1, diff+1):
                 if text[:-pos] == self.boards[board][-1] or text == self.boards[board][-1][:-pos]:
                     logging.debug("smart-update: removing.")
                     # new selection is a longer/shorter version of previous
                     self.boards[board].pop()
+            if self.config.getboolean('clipster', 'extract_uris'):
+                # Simple uri regex
+                url_re = r'\S+://\S+'
+                for url in set(re.findall(url_re, text)):
+                    if url != text:
+                        logging.debug("URL found: %s", url)
+                        self.de_duplicate(board, url)
+                        self.boards[board].append(url)
+            if self.config.getboolean('clipster', 'extract_emails'):
+                # Simple email regex
+                mail_re = r'\S+\@\S+\.\S+'
+                for email in set(re.findall(mail_re, text)):
+                    # Skip urls with auth info that look a bit like emails
+                    # e.g. http://bob:passwd@example.com
+                    if ':' not in email:
+                        if email != text:
+                            logging.debug("Email found: %s", email)
+                            self.de_duplicate(board, email)
+                            self.boards[board].append(email)
+
             self.boards[board].append(text)
             logging.debug(self.boards[board])
 
@@ -402,7 +429,9 @@ def parse_config(args, clipster_dir):
                        "max_input": "50000",  # max length of selection input
                        "row_height": "3",  # num rows to show in widget
                        "duplicates": "no",  # allow duplicates, or instead move the original entry to top
-                       "smart_update": "1"}  # Replace rather than append is selection is similar to previous
+                       "smart_update": "1",  # Replace rather than append is selection is similar to previous
+                       "extract_uris": "yes",  # Extract uris within selection text
+                       "extract_emails": "yes"}  # Extract emails within selection text
 
     config = configparser.SafeConfigParser(config_defaults)
     config.add_section('clipster')

@@ -4,6 +4,7 @@ Clipster is a simple clipboard manager, written in `Python` (2 or 3). It aims to
 
 Clipster has 2 modes of operation - `daemon`, which handles clipboard events and maintains a history, and `client`, which requests clipboard history from, and pushes new items to, the daemon.
 
+
 ## Installation
 
 You will need the python bindings for the gobject introspection libraries. These are provded by the `python-gi` package on debian-based systems, or by the `pygobject3` package on redhat-based systems.
@@ -79,6 +80,13 @@ duplicates = no
 # items with a single character added or removed each time.
 # Set to 0 to disable.
 smart_update = 1
+
+# Extract uris from the selection text and add them to the default clipboard
+extract_uris = yes
+
+# Extract emails from the selection text and add them to the default clipboard
+extract_emails = yes
+
 
 ```
 
