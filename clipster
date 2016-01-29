@@ -84,6 +84,8 @@ class Clipster(object):
             self.hist_file = self.config.get('clipster', 'history_file')
             self.pid_file = self.config.get('clipster', 'pid_file')
             self.max_input = self.config.getint('clipster', 'max_input')
+            # Flag to indicate that the in-memory history should be flushed to disk
+            self.update_history_file = False
 
         def keypress_handler(self, widget, event):
             """Handler for selection_widget keypress events."""
@@ -160,13 +162,20 @@ class Clipster(object):
         def write_history_file(self):
             """Write clipboard history to file."""
 
-            logging.debug("Writing history to file.")
-            tmp_fd, tmp_name = tempfile.mkstemp(dir=self.config.get('clipster', 'clipster_dir'))
-            # Limit history file to contain last 'history_size' items
-            limit = self.config.getint('clipster', 'history_size')
-            hist = {x: y[-limit:] for x, y in self.boards.items()}
-            os.write(tmp_fd, json.dumps(hist).encode('utf-8'))
-            os.rename(tmp_name, self.hist_file)
+            if self.update_history_file:
+                logging.debug("Writing history to file.")
+                tmp_fd, tmp_name = tempfile.mkstemp(dir=self.config.get('clipster', 'clipster_dir'))
+                # Limit history file to contain last 'history_size' items
+                limit = self.config.getint('clipster', 'history_size')
+                hist = {x: y[-limit:] for x, y in self.boards.items()}
+                os.write(tmp_fd, json.dumps(hist).encode('utf-8'))
+                os.rename(tmp_name, self.hist_file)
+                self.update_history_file = False
+            else:
+                logging.debug("History unchanged - not writing to file.")
+            # Return true to make the timeout handler recur
+            return True
+
 
         def update_board(self, board, data):
             """Update a clipboard."""
@@ -220,6 +229,10 @@ class Clipster(object):
                             self.boards[board].append(email)
 
             self.boards[board].append(text)
+            # Flag that the history file needs updating
+            self.update_history_file = True
+            if self.config.getboolean('clipster', 'write_on_change'):
+                self.write_history_file()
             logging.debug(self.boards[board])
 
         def owner_change(self, board, event):
@@ -399,6 +412,15 @@ class Clipster(object):
             # Handle unix signals
             GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGINT, self.exit)
             GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, self.exit)
+
+            # Timeout for flushing history to disk
+            # Do nothing if timeout is 0, or write_on_change is set in config
+            history_timeout = self.config.getint('clipster', 'history_update_interval')
+            if history_timeout and not self.config.getboolean('clipster', 'write_on_change'):
+                logging.debug("Writing history file every %s seconds", history_timeout)
+                GObject.timeout_add_seconds(history_timeout,
+                                            self.write_history_file)
+
             Gtk.main()
 
 
@@ -434,6 +456,8 @@ def parse_config(args, clipster_dir):
                        "default_selection": "PRIMARY",  # PRIMARY or CLIPBOARD
                        "history_file": "%(clipster_dir)s/history",
                        "history_size": "200",  # Number of items to be saved in the history file (for each selection)
+                       "history_update_interval": "60", # Flush history to disk every N seconds, if changed (0 disables timeout)
+                       "write_on_change": "no", # Always write history file immediately (overrides history_update_interval)
                        "socket_file": "%(clipster_dir)s/clipster_sock",
                        "pid_file":  "%(clipster_dir)s/clipster.pid",
                        "max_input": "50000",  # max length of selection input

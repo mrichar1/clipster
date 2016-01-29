@@ -60,6 +60,14 @@ history_file = %(clipster_dir)s/history
 # Number of items to save in the history file for each selection.
 history_size = 200
 
+# Time in seconds to flush history to disk, if changed
+# Set to 0 to only write history file on (clean) exit
+history_update_interval = 60
+
+# Write history file immediately after selection changes?
+# If yes, disables history_update_interval
+write_on_change = no
+
 # Full path to the clipster socket file
 socket_file = %(clipster_dir)s/clipster_sock
 
