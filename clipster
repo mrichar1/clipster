@@ -5,6 +5,7 @@
 # pylint: disable=line-too-long
 
 from __future__ import print_function
+from gi import require_version
 from gi.repository import Gtk, Gdk, GLib, GObject
 import signal
 import argparse
@@ -23,6 +24,7 @@ try:
 except ImportError:
     # py 2.x
     import ConfigParser as configparser
+require_version("Gtk", "3.0")
 
 
 class Clipster(object):
