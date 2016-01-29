@@ -47,6 +47,8 @@ You can create a config file containing only some of the options, and the rest w
 
 
 ``` bash
+[all]
+
 # 'root' directory for clipster resources (defaults to $HOME/.clipster)
 clipster_dir = /path/to/clipster/resources
 
