@@ -46,7 +46,8 @@ The config options, and their default values, are shown below. Note the `%()s` s
 You can create a config file containing only some of the options, and the rest will be derived from defaults.
 
 
-``` bash
+``` 
+[clipster]
 # 'root' directory for clipster resources (defaults to $HOME/.clipster)
 clipster_dir = /path/to/clipster/resources
 
