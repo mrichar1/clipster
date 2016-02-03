@@ -76,6 +76,7 @@ class Clipster(object):
         def __init__(self, config):
             """Set up clipboard objects and history dict."""
             self.config = config
+            self.patterns = None
             self.window = self.p_id = self.c_id = self.sock_s = None
             self.sock_file = self.config.get('clipster', 'socket_file')
             self.primary = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
@@ -208,6 +209,16 @@ class Clipster(object):
                     logging.debug("smart-update: removing.")
                     # new selection is a longer/shorter version of previous
                     self.boards[board].pop()
+            if self.patterns:
+                for pattern in self.patterns:
+                    try:
+                        for match in set(re.findall(pattern, text)):
+                            if match != text:
+                                logging.debug("Pattern '%s' matched in: %s", pattern, text)
+                                self.de_duplicate(board, match)
+                                self.boards[board].append(match)
+                    except re.error as exc:
+                        logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.message)
             if self.config.getboolean('clipster', 'extract_uris'):
                 # Simple uri regex
                 url_re = r'\S+://\S+'
@@ -371,6 +382,19 @@ class Clipster(object):
             self.sock_s.bind(self.sock_file)
             self.sock_s.listen(5)
 
+            # Read in patterns file
+            if self.config.getboolean('clipster', 'extract_patterns'):
+                try:
+                    patfile = os.path.join(self.config.get('clipster', 'clipster_dir'), 'patterns')
+                    with open(patfile, 'r') as pat_f:
+                        self.patterns = [x.strip() for x in pat_f.read().splitlines()]
+                        logging.debug("Loaded patterns: %s", ','.join(self.patterns))
+
+                except IOError as exc:
+                    logging.warn("Unable to read patterns file: %s %s", patfile, exc.strerror)
+
+
+
         def exit(self):
             """Clean up things before exiting."""
 
@@ -465,7 +489,8 @@ def parse_config(args, clipster_dir):
                        "duplicates": "no",  # allow duplicates, or instead move the original entry to top
                        "smart_update": "1",  # Replace rather than append is selection is similar to previous
                        "extract_uris": "yes",  # Extract uris within selection text
-                       "extract_emails": "yes"}  # Extract emails within selection text
+                       "extract_emails": "yes",  # Extract emails within selection text
+                       "extract_patterns": "no"} # Extract patterns based on regexes stored in clipster_dir/patterns (one per line).
 
     config = configparser.SafeConfigParser(config_defaults)
     config.add_section('clipster')

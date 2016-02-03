@@ -46,7 +46,7 @@ The config options, and their default values, are shown below. Note the `%()s` s
 You can create a config file containing only some of the options, and the rest will be derived from defaults.
 
 
-``` 
+```
 [clipster]
 # 'root' directory for clipster resources (defaults to $HOME/.clipster)
 clipster_dir = /path/to/clipster/resources
@@ -100,6 +100,8 @@ extract_uris = yes
 # Extract emails from the selection text and add them to the default clipboard
 extract_emails = yes
 
+# Extract patterns (as specified in patterns file: clipster_dir/patterns) and add them to the default clipboard
+extract_patterns = no
 
 ```
 
@@ -165,6 +167,16 @@ exec --no-startup-id clipster -d
 bindsym $mod+c exec clipster -sp
 
 ```
+
+
+## Pattern Matching
+
+As well as the `extract_uris` and `extract_emails` options, there is a general-purpose `extract_patterns` flag. If enabled, this will cause clipster to try to read regular expressions from the `patterns` file (in `clipster_dir`) and parse the selection text for matching patterns, adding the matched text to the history. clipster will skip any invalid patterns, logging a warning.
+
+The `patterns` file expects one regular expression per line. Do not add any comments, quote-marks or delimiters (e.g. `/`) unles these are part of your pattern.
+
+For example, to match all numbers within the selection text, add `\d+` to the `patterns` file.
+
 
 ## Bugs & Improvements
 
