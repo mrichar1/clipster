@@ -5,9 +5,38 @@ Clipster is a simple clipboard manager, written in `Python` (2 or 3). It aims to
 Clipster has 2 modes of operation - `daemon`, which handles clipboard events and maintains a history, and `client`, which requests clipboard history from, and pushes new items to, the daemon.
 
 
+## Features
+
+Clipster was designed to try to add a good selection of useful features, while avoiding bad design decisions or becoming excessively large. Its feature list includes:
+
+* Event driven, rather than polling. More efficient, helps with power management.
+
+* Control over when it write to disk, for similar reasons.
+
+* Command-line options/config for everything.
+
+* No global keybindings - that's the job of a Window Manager
+
+* Sensible handling of unusual clipboard events. Some apps (Chrome, Emacs) trigger a clipboard 'update event' for every character you select, rather than just one event when you stop selecting.
+
+* Preserves the last item in clipboard after an application closes. (Many apps clear the clipboard on exit).
+
+* Minimal dependencies, no complicated build/install requirements.
+
+* utf-8 support
+
+* Proper handling of embedded newlines and control codes.
+
+* Smart matching of urls, emails, regexes.
+
+
+New feature requests always welcome! See `Bugs & Improvements` at the end of this document.
+
+
+
 ## Installation
 
-You will need the python bindings for the gobject introspection libraries. These are provded by the `python-gi` package on debian-based systems, or by the `pygobject3` package on redhat-based systems.
+You will need the python bindings for the gobject introspection libraries. These are provided by the `python-gi` package on debian-based systems, or by the `pygobject3` package on redhat-based systems.
 
 To install Clipster, simply download the clipster script from this repository and save it somewhere in your path.
 
