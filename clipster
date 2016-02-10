@@ -222,7 +222,7 @@ class Clipster(object):
                         logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.message)
             if self.config.getboolean('clipster', 'extract_uris'):
                 # Simple uri regex
-                url_re = r'\S+://\S+'
+                url_re = r'\b\S+://\S+\b'
                 for url in set(re.findall(url_re, text)):
                     if url != text:
                         logging.debug("URL found: %s", url)
@@ -230,7 +230,7 @@ class Clipster(object):
                         self.boards[board].append(url)
             if self.config.getboolean('clipster', 'extract_emails'):
                 # Simple email regex
-                mail_re = r'\S+\@\S+\.\S+'
+                mail_re = r'\b\S+\@\S+\.\S+\b'
                 for email in set(re.findall(mail_re, text)):
                     # Skip urls with auth info that look a bit like emails
                     # e.g. http://bob:passwd@example.com
