@@ -333,6 +333,14 @@ class Clipster(object):
             """Ensure that all files and sockets used
             by the daemon are available."""
 
+            # Create the clipster dir if necessary
+            try:
+                os.makedirs(self.config.get('clipster', 'clipster_dir'))
+            except OSError as exc:
+                if exc.errno == errno.EEXIST:
+                    # ok if directory already exists
+                    pass
+
             # check for existing pid_file, and tidy up if appropriate
             try:
                 with open(self.pid_file, 'r') as runf_r:
@@ -358,14 +366,6 @@ class Clipster(object):
             # Create pid file
             with open(self.pid_file, 'w') as runf_w:
                 runf_w.write(str(os.getpid()))
-
-            # Create the clipster dir if necessary
-            try:
-                os.makedirs(self.config.get('clipster', 'clipster_dir'))
-            except OSError as exc:
-                if exc.errno == errno.EEXIST:
-                    # ok if directory already exists
-                    pass
 
             # Read in history from file
             self.read_history_file()
