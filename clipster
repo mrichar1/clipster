@@ -268,9 +268,10 @@ class Clipster(object):
                 if dev.get_source() == Gdk.InputSource.MOUSE:
                     mouse = dev
                     break
-            while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(mouse)[3]:
+            if mouse:
+                while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(mouse)[3]:
                 # Do nothing while mouse button is held down (selection drag)
-                pass
+                    pass
 
             text = ""
             # Read clipboard
