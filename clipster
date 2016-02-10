@@ -54,6 +54,7 @@ class Clipster(object):
             sys.exit(1)
         logging.debug("Sending message: %s", message)
         sock_c.sendall(message.encode('utf-8'))
+        sock_c.shutdown(socket.SHUT_WR)
         data = []
         while True:
             try:
@@ -291,17 +292,23 @@ class Clipster(object):
             # Unblock event handling
             board.handler_unblock(event_id)
 
-        def socket_listen(self, sock_s, _):
-            """Establish a socket listening for client connections."""
-
+        def socket_accept(self, sock_s, _):
+            """Accept a connection and 'select' it for readability."""
             conn, _ = sock_s.accept()
-            conn.setblocking(0)
+            GObject.io_add_watch(conn, GObject.IO_IN,
+                                 self.socket_listen)
+            return True
+
+
+        def socket_listen(self, conn, _):
+            """Try to read data from an accepted connection."""
+
             data = []
             recv_total = 0
             while True:
                 try:
                     recv = conn.recv(8192)
-                    logging.debug("Client connection received.")
+                    logging.debug("Client connection received: %s", recv)
                     if not recv:
                         break
                     data.append(recv.decode('utf-8'))
@@ -378,7 +385,6 @@ class Clipster(object):
                     pass
 
             self.sock_s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.sock_s.setblocking(0)
             self.sock_s.bind(self.sock_file)
             self.sock_s.listen(5)
 
@@ -432,7 +438,7 @@ class Clipster(object):
                                                self.owner_change)
             # Handle socket connections
             GObject.io_add_watch(self.sock_s, GObject.IO_IN,
-                                 self.socket_listen)
+                                 self.socket_accept)
             # Handle unix signals
             GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGINT, self.exit)
             GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, self.exit)
