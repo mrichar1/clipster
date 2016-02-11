@@ -540,8 +540,8 @@ def parse_config(args, data_dir):
                        "max_input": "50000",  # max length of selection input
                        "row_height": "3",  # num rows to show in widget
                        "duplicates": "no",  # allow duplicates, or instead move the original entry to top
-                       "smart_update": "1",  # Replace rather than append is selection is similar to previous
-                       "extract_uris": "yes",  # Extract uris within selection text
+                       "smart_update": "1",  # Replace rather than append if selection is similar to previous
+                       "extract_uris": "yes",  # Extract URIs within selection text
                        "extract_emails": "yes",  # Extract emails within selection text
                        "extract_patterns": "no"}  # Extract patterns based on regexes stored in data_dir/patterns (one per line).
 
