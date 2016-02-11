@@ -328,7 +328,7 @@ class Clipster(object):
             """Accept a connection and 'select' it for readability."""
 
             conn, _ = sock_s.accept()
-            self.client_msgs[conn.fileno] = []
+            self.client_msgs[conn.fileno()] = []
             GObject.io_add_watch(conn, GObject.IO_IN,
                                  self.socket_recv)
             return True
@@ -340,7 +340,7 @@ class Clipster(object):
             try:
                 recv = conn.recv(8192)
                 recv_total += len(recv)
-                self.client_msgs[conn.fileno].append(recv.decode('utf-8'))
+                self.client_msgs[conn.fileno()].append(recv.decode('utf-8'))
                 logging.debug("Client connection received.")
             except socket.error as exc:
                 logging.debug("Socket error %s", exc)
@@ -357,8 +357,8 @@ class Clipster(object):
         def process_msg(self, conn):
             """Process message received from client, sending reply if required."""
 
-            if self.client_msgs[conn.fileno]:
-                msg_str = ''.join(self.client_msgs[conn.fileno])
+            if self.client_msgs[conn.fileno()]:
+                msg_str = ''.join(self.client_msgs[conn.fileno()])
                 try:
                     sig, board, count, content = msg_str.split(':', 3)
                     count = int(count)
@@ -377,7 +377,7 @@ class Clipster(object):
                                           self.boards[board][-count:])
                             # Send list (reversed) as json to preserve structure
                             conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
-                del(self.client_msgs[conn.fileno])
+                del(self.client_msgs[conn.fileno()])
 
         def prepare_files(self):
             """Ensure that all files and sockets used
