@@ -74,7 +74,9 @@ optional arguments:
 
 ### Config file
 
-Clipster looks for its configuration file (and other resources) in `$HOME/.clipster` by default, but this can be changed using the `-f` option.
+Clipster (mostly) follows the XDG base-dir spec: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+
+Clipster looks for its configuration file in $XDG_CONFIG_HOME (usually `$HOME/.config/clipster/clipster.ini` or `/etc/xdg/clipster`), but this can be changed using the `-f` option.
 
 The config options, and their default values, are shown below. Note the `%()s` syntax can be used to re-use an existing config option's value elsewhere.
 
@@ -83,8 +85,8 @@ You can create a config file containing only some of the options, and the rest w
 
 ```
 [clipster]
-# 'root' directory for clipster resources (defaults to $HOME/.clipster)
-clipster_dir = /path/to/clipster/resources
+# Directory for clipster data/files (usually `$HOME/.local/share/clipster`)
+data_dir = $XDG_DATA_HOME
 
 # Default selection (if no -p of -c given on command-line): can be PRIMARY or CLIPBOARD
 default_selection = PRIMARY

@@ -201,7 +201,7 @@ class Clipster(object):
                 # If limit is 0, don't write to file
                 if limit:
                     logging.debug("Writing history to file.")
-                    tmp_fd, tmp_name = tempfile.mkstemp(dir=self.config.get('clipster', 'clipster_dir'))
+                    tmp_fd, tmp_name = tempfile.mkstemp(dir=self.config.get('clipster', 'data_dir'))
                     hist = {x: y[-limit:] for x, y in self.boards.items()}
                     os.write(tmp_fd, json.dumps(hist).encode('utf-8'))
                     os.rename(tmp_name, self.hist_file)
@@ -385,7 +385,7 @@ class Clipster(object):
 
             # Create the clipster dir if necessary
             try:
-                os.makedirs(self.config.get('clipster', 'clipster_dir'))
+                os.makedirs(self.config.get('clipster', 'data_dir'))
             except OSError as exc:
                 if exc.errno == errno.EEXIST:
                     # ok if directory already exists
@@ -434,7 +434,7 @@ class Clipster(object):
             # Read in patterns file
             if self.config.getboolean('clipster', 'extract_patterns'):
                 try:
-                    patfile = os.path.join(self.config.get('clipster', 'clipster_dir'), 'patterns')
+                    patfile = os.path.join(self.config.get('clipster', 'data_dir'), 'patterns')
                     with open(patfile, 'r') as pat_f:
                         self.patterns = [x.strip() for x in pat_f.read().splitlines()]
                         logging.debug("Loaded patterns: %s", ','.join(self.patterns))
@@ -495,11 +495,10 @@ class Clipster(object):
             Gtk.main()
 
 
-def parse_args(clipster_dir):
+def parse_args(config_file):
     """Parse command-line arguments."""
 
     # Set a default config file
-    config_file = os.path.join(clipster_dir, "config")
 
     parser = argparse.ArgumentParser(description='Clipster clipboard manager.')
     parser.add_argument('-f', '--config', action="store",
@@ -525,25 +524,25 @@ def parse_args(clipster_dir):
     return parser.parse_args()
 
 
-def parse_config(args, clipster_dir):
+def parse_config(args, data_dir):
     """Configuration derived from defaults & file."""
 
     # Set some config defaults
-    config_defaults = {"clipster_dir": clipster_dir,  # clipster 'root' dir
+    config_defaults = {"data_dir": data_dir,  # clipster 'root' dir (see history/socket/pid file config)
                        "default_selection": "PRIMARY",  # PRIMARY or CLIPBOARD
-                       "history_file": "%(clipster_dir)s/history",
+                       "history_file": "%(data_dir)s/history",
                        "history_size": "200",  # Number of items to be saved in the history file (for each selection)
                        "history_update_interval": "60",  # Flush history to disk every N seconds, if changed (0 disables timeout)
                        "write_on_change": "no",  # Always write history file immediately (overrides history_update_interval)
-                       "socket_file": "%(clipster_dir)s/clipster_sock",
-                       "pid_file":  "%(clipster_dir)s/clipster.pid",
+                       "socket_file": "%(data_dir)s/clipster_sock",
+                       "pid_file":  "%(data_dir)s/clipster.pid",
                        "max_input": "50000",  # max length of selection input
                        "row_height": "3",  # num rows to show in widget
                        "duplicates": "no",  # allow duplicates, or instead move the original entry to top
                        "smart_update": "1",  # Replace rather than append is selection is similar to previous
                        "extract_uris": "yes",  # Extract uris within selection text
                        "extract_emails": "yes",  # Extract emails within selection text
-                       "extract_patterns": "no"}  # Extract patterns based on regexes stored in clipster_dir/patterns (one per line).
+                       "extract_patterns": "no"}  # Extract patterns based on regexes stored in data_dir/patterns (one per line).
 
     config = configparser.SafeConfigParser(config_defaults)
     config.add_section('clipster')
@@ -556,13 +555,6 @@ def parse_config(args, clipster_dir):
     logging.debug("Merged config: %s",
                   sorted(dict(config.items('clipster')).items()))
 
-    # Override clipdir, if it's an option in the config file
-    try:
-        clipdir = config.get('clipster', 'clipster_dir')
-    except configparser.Error:
-        # Otherwise, set the value back into the config
-        config.set('clipster', 'clipster_dir', clipdir)
-
     return config
 
 
@@ -570,17 +562,27 @@ def main():
     """Start the application."""
 
     # Set a default directory for clipster files
-    clipster_dir = os.path.join(os.environ.get('HOME'), ".clipster")
+    # https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+    xdg_config_dirs = os.environ.get('XDG_CONFIG_DIRS', '/etc/xdg').split(':')
+    xdg_config_dirs.append(os.environ.get('XDG_CONFIG_HOME', os.path.join(os.environ.get('HOME'), ".config")))
+    xdg_data_home = os.environ.get('XDG_DATA_HOME', os.path.join(os.environ.get('HOME'), ".local/share"))
+
+    data_dir = os.path.join(xdg_data_home, "clipster")
+    # Keep trying to define conf_file, moving from global -> local
+    conf_file = ""
+    for path in xdg_config_dirs:
+        if os.path.exists(os.path.join(path, 'clipster', "clipster.ini")):
+            conf_file = os.path.join(path, 'clipster', "clipster.ini")
 
     # Parse command-line arguments
-    args = parse_args(clipster_dir)
+    args = parse_args(conf_file)
 
     # Enable logging
     logging.basicConfig(format='%(levelname)s:%(message)s',
                         level=getattr(logging, args.log_level.upper()))
     logging.debug("Debugging Enabled.")
 
-    config = parse_config(args, clipster_dir)
+    config = parse_config(args, data_dir)
 
     clipster = Clipster(config, args)
 
