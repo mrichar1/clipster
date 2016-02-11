@@ -178,7 +178,6 @@ class Clipster(object):
             # Return true to make the timeout handler recur
             return True
 
-
         def update_board(self, board, data):
             """Update a clipboard."""
 
@@ -270,10 +269,9 @@ class Clipster(object):
                     break
             if mouse:
                 while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(mouse)[3]:
-                # Do nothing while mouse button is held down (selection drag)
+                    # Do nothing while mouse button is held down (selection drag)
                     pass
 
-            text = ""
             # Read clipboard
             if event.reason != Gdk.OwnerChange.NEW_OWNER:
                 # CLOSE or DESTROY event
@@ -299,7 +297,6 @@ class Clipster(object):
             GObject.io_add_watch(conn, GObject.IO_IN,
                                  self.socket_listen)
             return True
-
 
         def socket_listen(self, conn, _):
             """Try to read data from an accepted connection."""
@@ -487,8 +484,8 @@ def parse_config(args, clipster_dir):
                        "default_selection": "PRIMARY",  # PRIMARY or CLIPBOARD
                        "history_file": "%(clipster_dir)s/history",
                        "history_size": "200",  # Number of items to be saved in the history file (for each selection)
-                       "history_update_interval": "60", # Flush history to disk every N seconds, if changed (0 disables timeout)
-                       "write_on_change": "no", # Always write history file immediately (overrides history_update_interval)
+                       "history_update_interval": "60",  # Flush history to disk every N seconds, if changed (0 disables timeout)
+                       "write_on_change": "no",  # Always write history file immediately (overrides history_update_interval)
                        "socket_file": "%(clipster_dir)s/clipster_sock",
                        "pid_file":  "%(clipster_dir)s/clipster.pid",
                        "max_input": "50000",  # max length of selection input
@@ -497,7 +494,7 @@ def parse_config(args, clipster_dir):
                        "smart_update": "1",  # Replace rather than append is selection is similar to previous
                        "extract_uris": "yes",  # Extract uris within selection text
                        "extract_emails": "yes",  # Extract emails within selection text
-                       "extract_patterns": "no"} # Extract patterns based on regexes stored in clipster_dir/patterns (one per line).
+                       "extract_patterns": "no"}  # Extract patterns based on regexes stored in clipster_dir/patterns (one per line).
 
     config = configparser.SafeConfigParser(config_defaults)
     config.add_section('clipster')
