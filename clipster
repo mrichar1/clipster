@@ -429,6 +429,7 @@ class Clipster(object):
 
             self.sock_s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.sock_s.bind(self.sock_file)
+            os.chmod(self.sock_file, 0600)
             self.sock_s.listen(5)
 
             # Read in patterns file
