@@ -30,12 +30,9 @@ except ImportError:
 class Clipster(object):
     """Clipboard Manager."""
 
-    def __init__(self, config):
+    def __init__(self, config, args):
         self.config = config
-        self.stdin = ""
-        if not sys.stdin.isatty():
-            if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-                self.stdin = sys.stdin.read()
+        self.args = args
 
     def client_update(self, client_action):
         """Send a signal and (optional) data from STDIN to daemon socket."""
@@ -98,7 +95,12 @@ class Clipster(object):
                 break
         sock_c.close()
         if data:
-            print(''.join(data), end='')
+            # data is a list of 1 or more parts of a json string.
+            # Reassemble this, then decode it, then print with delimiter
+            delim = '\n'
+            if self.args.nul:
+                delim = '\x00'
+            print(delim.join(json.loads(''.join(data))), end='')
 
     class Daemon(object):
         """Handles clipboard events, client requests, stores history."""
@@ -516,7 +518,9 @@ def parse_args(clipster_dir):
     parser.add_argument('-s', '--select', action="store_true",
                         help="Launch the clipboard history selection window.")
     parser.add_argument('-o', '--output', action="store",
-                        help="Output N lines of history (default 1)..")
+                        help="Output N lines of history (default 1).")
+    parser.add_argument('-0', '--nul', action="store_true",
+                        help="Use NUL character as output delimiter.")
 
     return parser.parse_args()
 
@@ -578,7 +582,7 @@ def main():
 
     config = parse_config(args, clipster_dir)
 
-    clipster = Clipster(config)
+    clipster = Clipster(config, args)
 
     # Launch the daemon
     if args.daemon:

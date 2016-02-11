@@ -36,6 +36,8 @@ New feature requests always welcome! See `Bugs & Improvements` at the end of thi
 
 ## Installation
 
+**Disclaimer:** At present Clipster is still under development. This means that, while the code should generally work as expected, features and design decisions are subject to change. Tagged releases will start to happen once the code-base has stabilised.
+
 You will need the python bindings for the gobject introspection libraries. These are provided by the `python-gi` package on debian-based systems, or by the `pygobject3` package on redhat-based systems.
 
 To install Clipster, simply download the clipster script from this repository and save it somewhere in your path.
@@ -62,6 +64,9 @@ optional arguments:
   -c, --clipboard       Query, or write STDIN to, the CLIPBOARD clipboard.
   -d, --daemon          Launch the daemon.
   -s, --select          Launch the clipboard history selection window.
+  -o OUTPUT, --output OUTPUT
+                        Output N lines of history (default 1).
+  -0, --nul             Use NUL character as output delimiter.
 
 ```
 
@@ -160,7 +165,13 @@ The client will use the value of `default_selection` from the config file to dec
 To get the latest entry in the clipboard:
 
 ``` bash
-~$ clipster [-p|-c]
+~$ clipster -o [-p|-c]
+```
+
+To get the last 5 items from the clipboard history:
+
+``` bash
+~$ clipster -o 5 [-p|-c]
 ```
 
 To add some text to the clipboard:
