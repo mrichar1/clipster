@@ -37,23 +37,54 @@ class Clipster(object):
             if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
                 self.stdin = sys.stdin.read()
 
-    def client(self, client_action):
+    def client_update(self, client_action):
         """Send a signal and (optional) data from STDIN to daemon socket."""
 
-        message = "{0}:{1}:{2}".format(client_action,
-                                       self.config.get('clipster',
-                                                       'default_selection'),
-                                       self.stdin)
 
-        logging.debug("Connecting to server socket.")
+        logging.debug("Connecting to server to update.")
         sock_c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             sock_c.connect(self.config.get('clipster', "socket_file"))
         except socket.error:
             logging.error("Error connecting to socket. Is daemon running?")
             sys.exit(1)
-        logging.debug("Sending message: %s", message)
-        sock_c.sendall(message.encode('utf-8'))
+        logging.debug("Sending request to server.")
+        # Fix for http://bugs.python.org/issue1633941 in py 2.x
+        # Send message 'header' - count is 0 (i.e to be ignored)
+        sock_c.sendall("{0}:{1}:0:".format(client_action,
+                                           self.config.get('clipster',
+                                                           'default_selection')))
+
+        if client_action is not "SELECT":
+            # Send data read from stdin
+            buf_size = 8192
+            while True:
+                if sys.stdin.isatty():
+                    recv = sys.stdin.readline(buf_size)
+                else:
+                    recv = sys.stdin.read(buf_size)
+                if not recv:
+                    break
+                sock_c.sendall(recv.encode('utf-8'))
+
+        sock_c.close()
+
+    def client_output(self, client_action, count):
+
+        logging.debug("Connecting to server to query history.")
+        sock_c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            sock_c.connect(self.config.get('clipster', "socket_file"))
+        except socket.error:
+            logging.error("Error connecting to socket. Is daemon running?")
+            sys.exit(1)
+        logging.debug("Sending request to server.")
+        # Send message 'header'
+        sock_c.sendall("{0}:{1}:{2}:".format(client_action,
+                                            self.config.get('clipster',
+                                                            'default_selection'),
+                                            count))
+
         sock_c.shutdown(socket.SHUT_WR)
         data = []
         while True:
@@ -85,7 +116,7 @@ class Clipster(object):
             self.boards = {"PRIMARY": [""], "CLIPBOARD": [""]}
             self.hist_file = self.config.get('clipster', 'history_file')
             self.pid_file = self.config.get('clipster', 'pid_file')
-            self.max_input = self.config.getint('clipster', 'max_input')
+            self.client_msgs = {}
             # Flag to indicate that the in-memory history should be flushed to disk
             self.update_history_file = False
 
@@ -293,46 +324,58 @@ class Clipster(object):
 
         def socket_accept(self, sock_s, _):
             """Accept a connection and 'select' it for readability."""
+
             conn, _ = sock_s.accept()
+            self.client_msgs[conn.fileno] = []
             GObject.io_add_watch(conn, GObject.IO_IN,
-                                 self.socket_listen)
+                                 self.socket_recv)
             return True
 
-        def socket_listen(self, conn, _):
-            """Try to read data from an accepted connection."""
+        def socket_recv(self, conn, _):
+            """Try to recv from an accepted connection."""
 
-            data = []
             recv_total = 0
-            while True:
-                try:
-                    recv = conn.recv(8192)
-                    logging.debug("Client connection received: %s", recv)
-                    if not recv:
-                        break
-                    data.append(recv.decode('utf-8'))
-                    recv_total += len(recv)
-                    if recv_total > self.max_input:
-                        break
-                except socket.error:
-                    break
-            if data:
-                logging.debug("Data received.")
-                sent = ''.join(data)
-                sig, board, content = sent.split(':', 2)
-                logging.debug("Received sig: %s", sig)
-                logging.debug("Received board: %s", board)
-                if sig == "SELECT":
-                    self.selection_widget(board)
-                elif sig == "BOARD":
-                    if content:
-                        logging.debug("Received content: %s", content)
-                        self.update_board(board, content)
-                    else:
-                        logging.debug("Sending latest selection entry: %s",
-                                      self.boards[board][-1])
-                        conn.sendall(self.boards[board][-1].encode('utf-8'))
-            conn.close()
+            try:
+                recv = conn.recv(8192)
+                recv_total += len(recv)
+                self.client_msgs[conn.fileno].append(recv.decode('utf-8'))
+                logging.debug("Client connection received.")
+            except socket.error as exc:
+                logging.debug("Socket error %s", exc)
+                # Return false to remove conn from GObject.io_add_watch list
+                conn.close()
+                return False
+            if not recv or recv_total > self.config.getint('clipster', 'max_input'):
+                self.process_msg(conn)
+                conn.close()
+                # Return false to remove conn from GObject.io_add_watch list
+                return False
             return True
+
+        def process_msg(self, conn):
+            """Process message received from client, sending reply if required."""
+
+            if self.client_msgs[conn.fileno]:
+                msg_str = ''.join(self.client_msgs[conn.fileno])
+                try:
+                    sig, board, count, content = msg_str.split(':', 3)
+                    count = int(count)
+                except ValueError:
+                    logging.error("Invalid message received via socket - ignoring")
+                else:
+                    logging.debug("Received: sig:%s, board:%s, count:%s", sig, board, count)
+                    if sig == "SELECT":
+                        self.selection_widget(board)
+                    elif sig == "BOARD":
+                        if content:
+                            logging.debug("Received content: %s", content)
+                            self.update_board(board, content)
+                        elif count:
+                            logging.debug("Sending requested selection(s): %s",
+                                          self.boards[board][-count:])
+                            # Send list (reversed) as json to preserve structure
+                            conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
+                del(self.client_msgs[conn.fileno])
 
         def prepare_files(self):
             """Ensure that all files and sockets used
@@ -472,6 +515,8 @@ def parse_args(clipster_dir):
                         help="Launch the daemon.")
     parser.add_argument('-s', '--select', action="store_true",
                         help="Launch the clipboard history selection window.")
+    parser.add_argument('-o', '--output', action="store",
+                        help="Output N lines of history (default 1)..")
 
     return parser.parse_args()
 
@@ -548,7 +593,17 @@ def main():
     elif args.clipboard:
         config.set('clipster', 'default_selection', 'CLIPBOARD')
 
-    clipster.client(client_action)
+    if args.output:
+        if args.select:
+            logging.error("Can't use --select and --output together.")
+            sys.exit(1)
+        else:
+            # Ask server for clipboard history
+            clipster.client_output(client_action, args.output)
+
+    else:
+        # Read from stdin and send to server
+        clipster.client_update(client_action)
 
 
 if __name__ == "__main__":
