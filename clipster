@@ -198,14 +198,16 @@ class Clipster(object):
             """Write clipboard history to file."""
 
             if self.update_history_file:
-                logging.debug("Writing history to file.")
-                tmp_fd, tmp_name = tempfile.mkstemp(dir=self.config.get('clipster', 'clipster_dir'))
                 # Limit history file to contain last 'history_size' items
                 limit = self.config.getint('clipster', 'history_size')
-                hist = {x: y[-limit:] for x, y in self.boards.items()}
-                os.write(tmp_fd, json.dumps(hist).encode('utf-8'))
-                os.rename(tmp_name, self.hist_file)
-                self.update_history_file = False
+                # If limit is 0, don't write to file
+                if limit:
+                    logging.debug("Writing history to file.")
+                    tmp_fd, tmp_name = tempfile.mkstemp(dir=self.config.get('clipster', 'clipster_dir'))
+                    hist = {x: y[-limit:] for x, y in self.boards.items()}
+                    os.write(tmp_fd, json.dumps(hist).encode('utf-8'))
+                    os.rename(tmp_name, self.hist_file)
+                    self.update_history_file = False
             else:
                 logging.debug("History unchanged - not writing to file.")
             # Return true to make the timeout handler recur
