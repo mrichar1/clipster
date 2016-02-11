@@ -287,44 +287,48 @@ class Clipster(object):
             logging.debug("owner-change event!")
             selection = str(event.selection)
             logging.debug("selection: %s", selection)
-            if selection == "PRIMARY":
-                event_id = self.p_id
-            else:
-                event_id = self.c_id
-            # Some apps update primary during mouse drag (chrome)
-            # Block at start to prevent repeated triggering
-            board.handler_block(event_id)
-            # FIXME: this devs hack is a bit verbose. Look instead at
-            # gdk_seat_get_pointer -> gdk_device_get_state
-            # once GdkSeat is in stable
-            mouse = None
-            for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
-                if dev.get_source() == Gdk.InputSource.MOUSE:
-                    mouse = dev
-                    break
-            if mouse:
-                while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(mouse)[3]:
-                    # Do nothing while mouse button is held down (selection drag)
-                    pass
+            active = self.config.get('clipster', 'active_selections').split(',')
 
-            # Read clipboard
-            if event.reason != Gdk.OwnerChange.NEW_OWNER:
-                # CLOSE or DESTROY event
-                logging.debug("Clipboard cleared. Reinstating from history.")
-                self.update_board(selection, self.boards[selection][-1])
-            elif board.wait_is_text_available():
-                logging.debug("Selection is text.")
-                text = board.wait_for_text()
-                if text:
-                    self.update_history(selection, text)
+            if selection in active:
+                logging.debug("Selection in 'active_selections'")
+                if selection == "PRIMARY":
+                    event_id = self.p_id
                 else:
-                    logging.debug("Selection empty. Reinstating from history.")
-                    self.update_board(selection, self.boards[selection][-1])
-            else:
-                logging.debug("Selection is not text - ignoring.")
+                    event_id = self.c_id
+                # Some apps update primary during mouse drag (chrome)
+                # Block at start to prevent repeated triggering
+                board.handler_block(event_id)
+                # FIXME: this devs hack is a bit verbose. Look instead at
+                # gdk_seat_get_pointer -> gdk_device_get_state
+                # once GdkSeat is in stable
+                mouse = None
+                for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
+                    if dev.get_source() == Gdk.InputSource.MOUSE:
+                        mouse = dev
+                        break
+                if mouse:
+                    while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(mouse)[3]:
+                        # Do nothing while mouse button is held down (selection drag)
+                        pass
 
-            # Unblock event handling
-            board.handler_unblock(event_id)
+                # Read clipboard
+                if event.reason != Gdk.OwnerChange.NEW_OWNER:
+                    # CLOSE or DESTROY event
+                    logging.debug("Clipboard cleared. Reinstating from history.")
+                    self.update_board(selection, self.boards[selection][-1])
+                elif board.wait_is_text_available():
+                    logging.debug("Selection is text.")
+                    text = board.wait_for_text()
+                    if text:
+                        self.update_history(selection, text)
+                    else:
+                        logging.debug("Selection empty. Reinstating from history.")
+                        self.update_board(selection, self.boards[selection][-1])
+                else:
+                    logging.debug("Selection is not text - ignoring.")
+
+                # Unblock event handling
+                board.handler_unblock(event_id)
 
         def socket_accept(self, sock_s, _):
             """Accept a connection and 'select' it for readability."""
@@ -533,6 +537,7 @@ def parse_config(args, data_dir):
     # Set some config defaults
     config_defaults = {"data_dir": data_dir,  # clipster 'root' dir (see history/socket/pid file config)
                        "default_selection": "PRIMARY",  # PRIMARY or CLIPBOARD
+                       "active_selections": "PRIMARY,CLIPBOARD",  # Comma-separated list of selections to monitor/save
                        "history_file": "%(data_dir)s/history",
                        "history_size": "200",  # Number of items to be saved in the history file (for each selection)
                        "history_update_interval": "60",  # Flush history to disk every N seconds, if changed (0 disables timeout)
@@ -598,8 +603,14 @@ def main():
         client_action = "SELECT"
 
     if args.primary:
+        if 'PRIMARY' not in config.get('clipster', 'active_selections'):
+            logging.error("PRIMARY not in 'active_selections' in config.")
+            sys.exit(1)
         config.set('clipster', 'default_selection', 'PRIMARY')
     elif args.clipboard:
+        if 'CLIPBOARD' not in config.get('clipster', 'active_selections'):
+            logging.error("CLIPBOARD not in active_selections' in config.")
+            sys.exit(1)
         config.set('clipster', 'default_selection', 'CLIPBOARD')
 
     if args.output:

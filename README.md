@@ -91,6 +91,9 @@ data_dir = $XDG_DATA_HOME
 # Default selection (if no -p of -c given on command-line): can be PRIMARY or CLIPBOARD
 default_selection = PRIMARY
 
+# Comma-separated list of selections to be watched and written to history
+active_selections = PRIMARY,CLIPBOARD
+
 # full path to the clipster history file (JSON)
 # Maximum file size is: 'history_size * max_input * 2' (defaults: 10MB)
 history_file = %(clipster_dir)s/history
