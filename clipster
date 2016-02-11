@@ -15,7 +15,6 @@ import socket
 import os
 import errno
 import sys
-import select
 import logging
 import tempfile
 import re
@@ -36,7 +35,6 @@ class Clipster(object):
 
     def client_update(self, client_action):
         """Send a signal and (optional) data from STDIN to daemon socket."""
-
 
         logging.debug("Connecting to server to update.")
         sock_c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -78,9 +76,9 @@ class Clipster(object):
         logging.debug("Sending request to server.")
         # Send message 'header'
         sock_c.sendall("{0}:{1}:{2}:".format(client_action,
-                                            self.config.get('clipster',
-                                                            'default_selection'),
-                                            count))
+                                             self.config.get('clipster',
+                                                             'default_selection'),
+                                             count))
 
         sock_c.shutdown(socket.SHUT_WR)
         data = []
@@ -379,7 +377,7 @@ class Clipster(object):
                                           self.boards[board][-count:])
                             # Send list (reversed) as json to preserve structure
                             conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
-                del(self.client_msgs[conn.fileno()])
+                del self.client_msgs[conn.fileno()]
 
         def prepare_files(self):
             """Ensure that all files and sockets used
@@ -443,8 +441,6 @@ class Clipster(object):
 
                 except IOError as exc:
                     logging.warn("Unable to read patterns file: %s %s", patfile, exc.strerror)
-
-
 
         def exit(self):
             """Clean up things before exiting."""
