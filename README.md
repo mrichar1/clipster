@@ -64,8 +64,9 @@ optional arguments:
   -c, --clipboard       Query, or write STDIN to, the CLIPBOARD clipboard.
   -d, --daemon          Launch the daemon.
   -s, --select          Launch the clipboard history selection window.
-  -o OUTPUT, --output OUTPUT
-                        Output N lines of history (default 1).
+  -o, --output          Output N lines of history (See -n).
+  -n NUMBER, --number NUMBER
+                        Number of lines to output: defaults to 1 (See -o).
   -0, --nul             Use NUL character as output delimiter.
 
 ```
@@ -171,7 +172,7 @@ To get the latest entry in the clipboard:
 To get the last 5 items from the clipboard history:
 
 ``` bash
-~$ clipster -o 5 [-p|-c]
+~$ clipster -o -n 5 [-p|-c]
 ```
 
 To add some text to the clipboard:

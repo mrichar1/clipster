@@ -517,8 +517,10 @@ def parse_args(clipster_dir):
                         help="Launch the daemon.")
     parser.add_argument('-s', '--select', action="store_true",
                         help="Launch the clipboard history selection window.")
-    parser.add_argument('-o', '--output', action="store", const=1, nargs='?',
-                        help="Output N lines of history (default 1).")
+    parser.add_argument('-o', '--output', action="store_true",
+                        help="Output last selection from history. (See -n).")
+    parser.add_argument('-n', '--number', action="store", type=int, default=1,
+                        help="Number of lines to output: defaults to 1 (See -o).")
     parser.add_argument('-0', '--nul', action="store_true",
                         help="Use NUL character as output delimiter.")
 
@@ -603,7 +605,7 @@ def main():
             sys.exit(1)
         else:
             # Ask server for clipboard history
-            clipster.client_output(client_action, args.output)
+            clipster.client_output(client_action, args.number)
 
     else:
         # Read from stdin and send to server
