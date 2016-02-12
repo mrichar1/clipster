@@ -76,7 +76,7 @@ optional arguments:
 
 Clipster (mostly) follows the XDG base-dir spec: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
-Clipster looks for its configuration file in $XDG_CONFIG_HOME (usually `$HOME/.config/clipster/clipster.ini` or `/etc/xdg/clipster`), but this can be changed using the `-f` option.
+Clipster looks for its configuration file in $XDG_CONFIG_HOME (usually `$HOME/.config/clipster/clipster.ini` or `/etc/xdg/clipster/clipster.ini`), but this can be changed using the `-f` option.
 
 The config options, and their default values, are shown below. Note the `%()s` syntax can be used to re-use an existing config option's value elsewhere.
 
@@ -93,6 +93,10 @@ default_selection = PRIMARY
 
 # Comma-separated list of selections to be watched and written to history
 active_selections = PRIMARY,CLIPBOARD
+
+# Enable synchronising of clipboards
+# Only clipboards listed in 'active selections' will be synchronised
+sync_selections = no
 
 # full path to the clipster history file (JSON)
 # Maximum file size is: 'history_size * max_input * 2' (defaults: 10MB)

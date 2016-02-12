@@ -216,6 +216,13 @@ class Clipster(object):
             """Update a clipboard."""
 
             getattr(self, board.lower()).set_text(data, -1)
+            if self.config.getboolean('clipster', 'sync_selections'):
+                # Whichever board we just set, set the other one, if it's active
+                boards = self.boards.keys()
+                boards.remove(board)
+                if boards[0] in self.config.get('clipster', 'active_selections'):
+                    logging.debug("Syncing board %s to %s", board, boards[0])
+                    getattr(self, boards[0].lower()).set_text(data, -1)
 
         def de_duplicate(self, board, text):
             """If an text already exists in the clipboard, remove it."""
@@ -539,6 +546,7 @@ def parse_config(args, data_dir):
     config_defaults = {"data_dir": data_dir,  # clipster 'root' dir (see history/socket/pid file config)
                        "default_selection": "PRIMARY",  # PRIMARY or CLIPBOARD
                        "active_selections": "PRIMARY,CLIPBOARD",  # Comma-separated list of selections to monitor/save
+                       "sync_selections": "no",  # Synchronise contents of both clipboards
                        "history_file": "%(data_dir)s/history",
                        "history_size": "200",  # Number of items to be saved in the history file (for each selection)
                        "history_update_interval": "60",  # Flush history to disk every N seconds, if changed (0 disables timeout)
