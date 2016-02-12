@@ -49,7 +49,7 @@ class Clipster(object):
         # Send message 'header' - count is 0 (i.e to be ignored)
         sock_c.sendall("{0}:{1}:0:".format(client_action,
                                            self.config.get('clipster',
-                                                           'default_selection')))
+                                                           'default_selection')).encode('utf-8'))
 
         if client_action is not "SELECT":
             # Send data read from stdin
@@ -79,7 +79,7 @@ class Clipster(object):
         sock_c.sendall("{0}:{1}:{2}:".format(client_action,
                                              self.config.get('clipster',
                                                              'default_selection'),
-                                             count))
+                                             count).encode('utf-8'))
 
         sock_c.shutdown(socket.SHUT_WR)
         data = []
