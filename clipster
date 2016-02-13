@@ -98,7 +98,7 @@ class Clipster(object):
             delim = '\n'
             if self.args.nul:
                 delim = '\x00'
-            print(delim.join(json.loads(''.join(data))), end='')
+            return delim.join(json.loads(''.join(data)))
 
     class Daemon(object):
         """Handles clipboard events, client requests, stores history."""
@@ -627,7 +627,7 @@ def main():
             sys.exit(1)
         else:
             # Ask server for clipboard history
-            clipster.client_output(client_action, args.number)
+            print(clipster.client_output(client_action, args.number), end='')
 
     else:
         # Read from stdin and send to server
