@@ -509,14 +509,11 @@ class Clipster(object):
             Gtk.main()
 
 
-def parse_args(config_file):
+def parse_args():
     """Parse command-line arguments."""
-
-    # Set a default config file
 
     parser = argparse.ArgumentParser(description='Clipster clipboard manager.')
     parser.add_argument('-f', '--config', action="store",
-                        default=config_file,
                         help="Path to config file.")
     parser.add_argument('-l', '--log_level', action="store", default="INFO",
                         help="Set log level: DEBUG, INFO (default), WARNING, ERROR, CRITICAL")
@@ -574,9 +571,7 @@ def parse_config(args, data_dir):
     return config
 
 
-def main():
-    """Start the application."""
-
+def find_config():
     # Set a default directory for clipster files
     # https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
     xdg_config_dirs = os.environ.get('XDG_CONFIG_DIRS', '/etc/xdg').split(':')
@@ -590,8 +585,22 @@ def main():
         if os.path.exists(os.path.join(path, 'clipster', "clipster.ini")):
             conf_file = os.path.join(path, 'clipster', "clipster.ini")
 
-    # Parse command-line arguments
-    args = parse_args(conf_file)
+    return conf_file, data_dir
+
+
+
+def main():
+    """Start the application."""
+
+    # Find default config file and data dir
+    conf_file, data_dir = find_config()
+
+    # parse command-line arguments
+    args = parse_args()
+
+    # Override default config file if provided
+    if not args.config:
+        args.config = conf_file
 
     # Enable logging
     logging.basicConfig(format='%(levelname)s:%(message)s',
