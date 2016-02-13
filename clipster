@@ -33,23 +33,23 @@ class Clipster(object):
     def __init__(self, config, args):
         self.config = config
         self.args = args
+        self.sock_c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 
     def client_update(self, client_action):
         """Send a signal and (optional) data from STDIN to daemon socket."""
 
         logging.debug("Connecting to server to update.")
-        sock_c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
-            sock_c.connect(self.config.get('clipster', "socket_file"))
+            self.sock_c.connect(self.config.get('clipster', "socket_file"))
         except socket.error:
             logging.error("Error connecting to socket. Is daemon running?")
             sys.exit(1)
         logging.debug("Sending request to server.")
         # Fix for http://bugs.python.org/issue1633941 in py 2.x
         # Send message 'header' - count is 0 (i.e to be ignored)
-        sock_c.sendall("{0}:{1}:0:".format(client_action,
-                                           self.config.get('clipster',
-                                                           'default_selection')).encode('utf-8'))
+        self.sock_c.sendall("{0}:{1}:0:".format(client_action,
+                                                self.config.get('clipster',
+                                                                'default_selection')).encode('utf-8'))
 
         if client_action is not "SELECT":
             # Send data read from stdin
@@ -61,41 +61,40 @@ class Clipster(object):
                     recv = sys.stdin.read(buf_size)
                 if not recv:
                     break
-                sock_c.sendall(recv.encode('utf-8'))
+                self.sock_c.sendall(recv.encode('utf-8'))
 
-        sock_c.close()
+        self.sock_c.close()
 
     def client_output(self, client_action, count):
 
         logging.debug("Connecting to server to query history.")
-        sock_c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
-            sock_c.connect(self.config.get('clipster', "socket_file"))
+            self.sock_c.connect(self.config.get('clipster', "socket_file"))
         except socket.error:
             logging.error("Error connecting to socket. Is daemon running?")
             sys.exit(1)
         logging.debug("Sending request to server.")
         # Send message 'header'
-        sock_c.sendall("{0}:{1}:{2}:".format(client_action,
-                                             self.config.get('clipster',
-                                                             'default_selection'),
-                                             count).encode('utf-8'))
+        self.sock_c.sendall("{0}:{1}:{2}:".format(client_action,
+                                                  self.config.get('clipster',
+                                                                  'default_selection'),
+                                                  count).encode('utf-8'))
 
-        sock_c.shutdown(socket.SHUT_WR)
+        self.sock_c.shutdown(socket.SHUT_WR)
         data = []
         while True:
             try:
-                recv = sock_c.recv(8192)
+                recv = self.sock_c.recv(8192)
                 logging.debug("Received data from server.")
                 if not recv:
                     break
                 data.append(recv.decode('utf-8'))
             except socket.error:
                 break
-        sock_c.close()
+        self.sock_c.close()
         if data:
             # data is a list of 1 or more parts of a json string.
-            # Reassemble this, then decode it, then print with delimiter
+            # Reassemble this, then join with delimiter
             delim = '\n'
             if self.args.nul:
                 delim = '\x00'
