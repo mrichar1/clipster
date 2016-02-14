@@ -34,7 +34,7 @@ class ClipsterError(Exception):
         Exception.__init__(self, args)
 
 
-class Clipster(object):
+class Client(object):
     """Clipboard Manager."""
 
     def __init__(self, config, args):
@@ -105,412 +105,412 @@ class Clipster(object):
                 delim = '\x00'
             return delim.join(json.loads(''.join(data)))
 
-    class Daemon(object):
-        """Handles clipboard events, client requests, stores history."""
+class Daemon(object):
+    """Handles clipboard events, client requests, stores history."""
 
-        # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-instance-attributes
 
-        def __init__(self, config):
-            """Set up clipboard objects and history dict."""
-            self.config = config
-            self.patterns = None
-            self.window = self.p_id = self.c_id = self.sock_s = None
-            self.sock_file = self.config.get('clipster', 'socket_file')
-            self.primary = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
-            self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-            self.boards = {"PRIMARY": [""], "CLIPBOARD": [""]}
-            self.hist_file = self.config.get('clipster', 'history_file')
-            self.pid_file = self.config.get('clipster', 'pid_file')
-            self.client_msgs = {}
-            # Flag to indicate that the in-memory history should be flushed to disk
-            self.update_history_file = False
+    def __init__(self, config):
+        """Set up clipboard objects and history dict."""
+        self.config = config
+        self.patterns = None
+        self.window = self.p_id = self.c_id = self.sock_s = None
+        self.sock_file = self.config.get('clipster', 'socket_file')
+        self.primary = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
+        self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        self.boards = {"PRIMARY": [""], "CLIPBOARD": [""]}
+        self.hist_file = self.config.get('clipster', 'history_file')
+        self.pid_file = self.config.get('clipster', 'pid_file')
+        self.client_msgs = {}
+        # Flag to indicate that the in-memory history should be flushed to disk
+        self.update_history_file = False
 
-        def keypress_handler(self, widget, event):
-            """Handler for selection_widget keypress events."""
+    def keypress_handler(self, widget, event):
+        """Handler for selection_widget keypress events."""
 
-            # Hide window if ESC is pressed
-            if event.keyval == Gdk.KEY_Escape:
-                self.window.hide()
-
-        def selection_handler(self, tree, path, col, board):
-            """Handler for selection widget 'select' event."""
-
-            # Get selection
-            model, treeiter = tree.get_selection().get_selected()
-            # Select full text from row
-            data = model[treeiter][1]
-            self.update_board(board, data)
-            model.clear()
+        # Hide window if ESC is pressed
+        if event.keyval == Gdk.KEY_Escape:
             self.window.hide()
 
-        def selection_widget(self, board):
-            """GUI window for selecting items from clipboard history."""
+    def selection_handler(self, tree, path, col, board):
+        """Handler for selection widget 'select' event."""
 
-            # Create windows & widgets
-            # Gtk complains about dialogs with no parents, so create one
-            rootwin = Gtk.Window()
-            self.window = Gtk.Dialog(title="Clipster", parent=rootwin)
-            scrolled = Gtk.ScrolledWindow()
-            model = Gtk.ListStore(str, str)
-            tree = Gtk.TreeView(model)
-            renderer = Gtk.CellRendererText()
-            column = Gtk.TreeViewColumn("{0} clipboard:".format(board),
-                                        renderer, markup=0)
+        # Get selection
+        model, treeiter = tree.get_selection().get_selected()
+        # Select full text from row
+        data = model[treeiter][1]
+        self.update_board(board, data)
+        model.clear()
+        self.window.hide()
 
-            # Add rows to the model
-            for item in self.boards[board][::-1]:
-                label = GLib.markup_escape_text(item)
-                row_height = self.config.getint('clipster', 'row_height')
-                trunc = ""
-                lines = label.splitlines(True)
-                if len(lines) > row_height:
-                    trunc = "<b><i>({0} more lines)</i></b>".format(len(lines) - row_height)
-                label = "{0}{1}".format(''.join(lines[:row_height]), trunc)
-                # Add label and full text to model
-                model.append([label, item])
+    def selection_widget(self, board):
+        """GUI window for selecting items from clipboard history."""
 
-            # Handle keypresses (looking for escape key)
-            self.window.connect("key-press-event", self.keypress_handler)
-            # Row is clicked on, or enter pressed
-            tree.connect("row-activated", self.selection_handler, board)
+        # Create windows & widgets
+        # Gtk complains about dialogs with no parents, so create one
+        rootwin = Gtk.Window()
+        self.window = Gtk.Dialog(title="Clipster", parent=rootwin)
+        scrolled = Gtk.ScrolledWindow()
+        model = Gtk.ListStore(str, str)
+        tree = Gtk.TreeView(model)
+        renderer = Gtk.CellRendererText()
+        column = Gtk.TreeViewColumn("{0} clipboard:".format(board),
+                                    renderer, markup=0)
 
-            # Format, connect and show windows
-            # Allow alternating color for rows, if WM theme supports it
-            tree.set_rules_hint(True)
-            # Draw horizontal divider lines between rows
-            tree.set_grid_lines(Gtk.TreeViewGridLines.HORIZONTAL)
+        # Add rows to the model
+        for item in self.boards[board][::-1]:
+            label = GLib.markup_escape_text(item)
+            row_height = self.config.getint('clipster', 'row_height')
+            trunc = ""
+            lines = label.splitlines(True)
+            if len(lines) > row_height:
+                trunc = "<b><i>({0} more lines)</i></b>".format(len(lines) - row_height)
+            label = "{0}{1}".format(''.join(lines[:row_height]), trunc)
+            # Add label and full text to model
+            model.append([label, item])
 
-            tree.append_column(column)
-            scrolled.add(tree)
-            # GtkDialog comes with a vbox already active, so pack into this
-            self.window.vbox.pack_start(scrolled, True, True, 0)
-            self.window.set_size_request(500, 500)
-            self.window.show_all()
+        # Handle keypresses (looking for escape key)
+        self.window.connect("key-press-event", self.keypress_handler)
+        # Row is clicked on, or enter pressed
+        tree.connect("row-activated", self.selection_handler, board)
 
-        def read_history_file(self):
-            """Read clipboard history from file."""
-            try:
-                with open(self.hist_file, 'r') as hist_f:
-                    self.boards.update(json.load(hist_f))
-            except IOError as exc:
-                if exc.errno == errno.ENOENT:
-                    # Not an error if there is no history file
-                    pass
+        # Format, connect and show windows
+        # Allow alternating color for rows, if WM theme supports it
+        tree.set_rules_hint(True)
+        # Draw horizontal divider lines between rows
+        tree.set_grid_lines(Gtk.TreeViewGridLines.HORIZONTAL)
 
-        def write_history_file(self):
-            """Write clipboard history to file."""
+        tree.append_column(column)
+        scrolled.add(tree)
+        # GtkDialog comes with a vbox already active, so pack into this
+        self.window.vbox.pack_start(scrolled, True, True, 0)
+        self.window.set_size_request(500, 500)
+        self.window.show_all()
 
-            if self.update_history_file:
-                # Limit history file to contain last 'history_size' items
-                limit = self.config.getint('clipster', 'history_size')
-                # If limit is 0, don't write to file
-                if limit:
-                    logging.debug("Writing history to file.")
-                    tmp_fd, tmp_name = tempfile.mkstemp(dir=self.config.get('clipster', 'data_dir'))
-                    hist = {x: y[-limit:] for x, y in self.boards.items()}
-                    os.write(tmp_fd, json.dumps(hist).encode('utf-8'))
-                    os.rename(tmp_name, self.hist_file)
-                    self.update_history_file = False
-            else:
-                logging.debug("History unchanged - not writing to file.")
-            # Return true to make the timeout handler recur
-            return True
-
-        def update_board(self, board, data):
-            """Update a clipboard."""
-
-            getattr(self, board.lower()).set_text(data, -1)
-            if self.config.getboolean('clipster', 'sync_selections'):
-                # Whichever board we just set, set the other one, if it's active
-                boards = self.boards.keys()
-                boards.remove(board)
-                if boards[0] in self.config.get('clipster', 'active_selections'):
-                    logging.debug("Syncing board %s to %s", board, boards[0])
-                    getattr(self, boards[0].lower()).set_text(data, -1)
-
-        def de_duplicate(self, board, text):
-            """If an text already exists in the clipboard, remove it."""
-
-            if not self.config.getboolean('clipster', 'duplicates'):
-                if text in self.boards[board]:
-                    logging.debug("duplicate: removing.")
-                    self.boards[board].remove(text)
-
-        def update_history(self, board, text):
-            """Update the in-memory clipboard history."""
-
-            logging.debug("Updating clipboard: %s", board)
-
-            try:
-                # Needed for unicode comparisons - see issue #1
-                text = text.decode('utf-8')
-            except (UnicodeDecodeError, AttributeError):
+    def read_history_file(self):
+        """Read clipboard history from file."""
+        try:
+            with open(self.hist_file, 'r') as hist_f:
+                self.boards.update(json.load(hist_f))
+        except IOError as exc:
+            if exc.errno == errno.ENOENT:
+                # Not an error if there is no history file
                 pass
 
-            self.de_duplicate(board, text)
-            diff = self.config.getint('clipster', 'smart_update')
-            last_item = self.boards[board][-1]
-            if text.startswith(last_item) or last_item.startswith(text):
-                # Make length difference a positive number before comparing
-                if abs(len(text) - len(last_item)) <= diff:
-                    logging.debug("smart-update: removing.")
-                    # new selection is a longer/shorter version of previous
-                    self.boards[board].pop()
-            if self.patterns:
-                for pattern in self.patterns:
-                    try:
-                        for match in set(re.findall(pattern, text)):
-                            if match != text:
-                                logging.debug("Pattern '%s' matched in: %s", pattern, text)
-                                self.de_duplicate(board, match)
-                                self.boards[board].append(match)
-                    except re.error as exc:
-                        logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.message)
-            if self.config.getboolean('clipster', 'extract_uris'):
-                # Simple uri regex
-                url_re = r'\b\S+://\S+\b'
-                for url in set(re.findall(url_re, text)):
-                    if url != text:
-                        logging.debug("URL found: %s", url)
-                        self.de_duplicate(board, url)
-                        self.boards[board].append(url)
-            if self.config.getboolean('clipster', 'extract_emails'):
-                # Simple email regex
-                mail_re = r'\b\S+\@\S+\.\S+\b'
-                for email in set(re.findall(mail_re, text)):
-                    # Skip urls with auth info that look a bit like emails
-                    # e.g. http://bob:passwd@example.com
-                    if ':' not in email:
-                        if email != text:
-                            logging.debug("Email found: %s", email)
-                            self.de_duplicate(board, email)
-                            self.boards[board].append(email)
+    def write_history_file(self):
+        """Write clipboard history to file."""
 
-            self.boards[board].append(text)
-            # Flag that the history file needs updating
-            self.update_history_file = True
-            if self.config.getboolean('clipster', 'write_on_change'):
-                self.write_history_file()
-            logging.debug(self.boards[board])
+        if self.update_history_file:
+            # Limit history file to contain last 'history_size' items
+            limit = self.config.getint('clipster', 'history_size')
+            # If limit is 0, don't write to file
+            if limit:
+                logging.debug("Writing history to file.")
+                tmp_fd, tmp_name = tempfile.mkstemp(dir=self.config.get('clipster', 'data_dir'))
+                hist = {x: y[-limit:] for x, y in self.boards.items()}
+                os.write(tmp_fd, json.dumps(hist).encode('utf-8'))
+                os.rename(tmp_name, self.hist_file)
+                self.update_history_file = False
+        else:
+            logging.debug("History unchanged - not writing to file.")
+        # Return true to make the timeout handler recur
+        return True
 
-        def owner_change(self, board, event):
-            """Handler for owner-change clipboard events."""
+    def update_board(self, board, data):
+        """Update a clipboard."""
 
-            logging.debug("owner-change event!")
-            selection = str(event.selection)
-            logging.debug("selection: %s", selection)
-            active = self.config.get('clipster', 'active_selections').split(',')
+        getattr(self, board.lower()).set_text(data, -1)
+        if self.config.getboolean('clipster', 'sync_selections'):
+            # Whichever board we just set, set the other one, if it's active
+            boards = self.boards.keys()
+            boards.remove(board)
+            if boards[0] in self.config.get('clipster', 'active_selections'):
+                logging.debug("Syncing board %s to %s", board, boards[0])
+                getattr(self, boards[0].lower()).set_text(data, -1)
 
-            if selection in active:
-                logging.debug("Selection in 'active_selections'")
-                if selection == "PRIMARY":
-                    event_id = self.p_id
+    def de_duplicate(self, board, text):
+        """If an text already exists in the clipboard, remove it."""
+
+        if not self.config.getboolean('clipster', 'duplicates'):
+            if text in self.boards[board]:
+                logging.debug("duplicate: removing.")
+                self.boards[board].remove(text)
+
+    def update_history(self, board, text):
+        """Update the in-memory clipboard history."""
+
+        logging.debug("Updating clipboard: %s", board)
+
+        try:
+            # Needed for unicode comparisons - see issue #1
+            text = text.decode('utf-8')
+        except (UnicodeDecodeError, AttributeError):
+            pass
+
+        self.de_duplicate(board, text)
+        diff = self.config.getint('clipster', 'smart_update')
+        last_item = self.boards[board][-1]
+        if text.startswith(last_item) or last_item.startswith(text):
+            # Make length difference a positive number before comparing
+            if abs(len(text) - len(last_item)) <= diff:
+                logging.debug("smart-update: removing.")
+                # new selection is a longer/shorter version of previous
+                self.boards[board].pop()
+        if self.patterns:
+            for pattern in self.patterns:
+                try:
+                    for match in set(re.findall(pattern, text)):
+                        if match != text:
+                            logging.debug("Pattern '%s' matched in: %s", pattern, text)
+                            self.de_duplicate(board, match)
+                            self.boards[board].append(match)
+                except re.error as exc:
+                    logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.message)
+        if self.config.getboolean('clipster', 'extract_uris'):
+            # Simple uri regex
+            url_re = r'\b\S+://\S+\b'
+            for url in set(re.findall(url_re, text)):
+                if url != text:
+                    logging.debug("URL found: %s", url)
+                    self.de_duplicate(board, url)
+                    self.boards[board].append(url)
+        if self.config.getboolean('clipster', 'extract_emails'):
+            # Simple email regex
+            mail_re = r'\b\S+\@\S+\.\S+\b'
+            for email in set(re.findall(mail_re, text)):
+                # Skip urls with auth info that look a bit like emails
+                # e.g. http://bob:passwd@example.com
+                if ':' not in email:
+                    if email != text:
+                        logging.debug("Email found: %s", email)
+                        self.de_duplicate(board, email)
+                        self.boards[board].append(email)
+
+        self.boards[board].append(text)
+        # Flag that the history file needs updating
+        self.update_history_file = True
+        if self.config.getboolean('clipster', 'write_on_change'):
+            self.write_history_file()
+        logging.debug(self.boards[board])
+
+    def owner_change(self, board, event):
+        """Handler for owner-change clipboard events."""
+
+        logging.debug("owner-change event!")
+        selection = str(event.selection)
+        logging.debug("selection: %s", selection)
+        active = self.config.get('clipster', 'active_selections').split(',')
+
+        if selection in active:
+            logging.debug("Selection in 'active_selections'")
+            if selection == "PRIMARY":
+                event_id = self.p_id
+            else:
+                event_id = self.c_id
+            # Some apps update primary during mouse drag (chrome)
+            # Block at start to prevent repeated triggering
+            board.handler_block(event_id)
+            # FIXME: this devs hack is a bit verbose. Look instead at
+            # gdk_seat_get_pointer -> gdk_device_get_state
+            # once GdkSeat is in stable
+            mouse = None
+            for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
+                if dev.get_source() == Gdk.InputSource.MOUSE:
+                    mouse = dev
+                    break
+            if mouse:
+                while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(mouse)[3]:
+                    # Do nothing while mouse button is held down (selection drag)
+                    pass
+
+            # Read clipboard
+            if event.reason != Gdk.OwnerChange.NEW_OWNER:
+                # CLOSE or DESTROY event
+                logging.debug("Clipboard cleared. Reinstating from history.")
+                self.update_board(selection, self.boards[selection][-1])
+            elif board.wait_is_text_available():
+                logging.debug("Selection is text.")
+                text = board.wait_for_text()
+                if text:
+                    self.update_history(selection, text)
                 else:
-                    event_id = self.c_id
-                # Some apps update primary during mouse drag (chrome)
-                # Block at start to prevent repeated triggering
-                board.handler_block(event_id)
-                # FIXME: this devs hack is a bit verbose. Look instead at
-                # gdk_seat_get_pointer -> gdk_device_get_state
-                # once GdkSeat is in stable
-                mouse = None
-                for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
-                    if dev.get_source() == Gdk.InputSource.MOUSE:
-                        mouse = dev
-                        break
-                if mouse:
-                    while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(mouse)[3]:
-                        # Do nothing while mouse button is held down (selection drag)
-                        pass
-
-                # Read clipboard
-                if event.reason != Gdk.OwnerChange.NEW_OWNER:
-                    # CLOSE or DESTROY event
-                    logging.debug("Clipboard cleared. Reinstating from history.")
+                    logging.debug("Selection empty. Reinstating from history.")
                     self.update_board(selection, self.boards[selection][-1])
-                elif board.wait_is_text_available():
-                    logging.debug("Selection is text.")
-                    text = board.wait_for_text()
-                    if text:
-                        self.update_history(selection, text)
-                    else:
-                        logging.debug("Selection empty. Reinstating from history.")
-                        self.update_board(selection, self.boards[selection][-1])
-                else:
-                    logging.debug("Selection is not text - ignoring.")
+            else:
+                logging.debug("Selection is not text - ignoring.")
 
-                # Unblock event handling
-                board.handler_unblock(event_id)
+            # Unblock event handling
+            board.handler_unblock(event_id)
 
-        def socket_accept(self, sock_s, _):
-            """Accept a connection and 'select' it for readability."""
+    def socket_accept(self, sock_s, _):
+        """Accept a connection and 'select' it for readability."""
 
-            conn, _ = sock_s.accept()
-            self.client_msgs[conn.fileno()] = []
-            GObject.io_add_watch(conn, GObject.IO_IN,
-                                 self.socket_recv)
-            return True
+        conn, _ = sock_s.accept()
+        self.client_msgs[conn.fileno()] = []
+        GObject.io_add_watch(conn, GObject.IO_IN,
+                             self.socket_recv)
+        return True
 
-        def socket_recv(self, conn, _):
-            """Try to recv from an accepted connection."""
+    def socket_recv(self, conn, _):
+        """Try to recv from an accepted connection."""
 
-            recv_total = 0
+        recv_total = 0
+        try:
+            recv = conn.recv(8192)
+            recv_total += len(recv)
+            self.client_msgs[conn.fileno()].append(recv.decode('utf-8'))
+            logging.debug("Client connection received.")
+        except socket.error as exc:
+            logging.debug("Socket error %s", exc)
+            # Return false to remove conn from GObject.io_add_watch list
+            conn.close()
+            return False
+        if not recv or recv_total > self.config.getint('clipster', 'max_input'):
+            self.process_msg(conn)
+            conn.close()
+            # Return false to remove conn from GObject.io_add_watch list
+            return False
+        return True
+
+    def process_msg(self, conn):
+        """Process message received from client, sending reply if required."""
+
+        if self.client_msgs[conn.fileno()]:
+            msg_str = ''.join(self.client_msgs[conn.fileno()])
             try:
-                recv = conn.recv(8192)
-                recv_total += len(recv)
-                self.client_msgs[conn.fileno()].append(recv.decode('utf-8'))
-                logging.debug("Client connection received.")
-            except socket.error as exc:
-                logging.debug("Socket error %s", exc)
-                # Return false to remove conn from GObject.io_add_watch list
-                conn.close()
-                return False
-            if not recv or recv_total > self.config.getint('clipster', 'max_input'):
-                self.process_msg(conn)
-                conn.close()
-                # Return false to remove conn from GObject.io_add_watch list
-                return False
-            return True
+                sig, board, count, content = msg_str.split(':', 3)
+                count = int(count)
+            except ValueError:
+                logging.error("Invalid message received via socket - ignoring")
+            else:
+                logging.debug("Received: sig:%s, board:%s, count:%s", sig, board, count)
+                if sig == "SELECT":
+                    self.selection_widget(board)
+                elif sig == "BOARD":
+                    if content:
+                        logging.debug("Received content: %s", content)
+                        self.update_board(board, content)
+                    elif count:
+                        logging.debug("Sending requested selection(s): %s",
+                                      self.boards[board][-count:])
+                        # Send list (reversed) as json to preserve structure
+                        conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
+            del self.client_msgs[conn.fileno()]
 
-        def process_msg(self, conn):
-            """Process message received from client, sending reply if required."""
+    def prepare_files(self):
+        """Ensure that all files and sockets used
+        by the daemon are available."""
 
-            if self.client_msgs[conn.fileno()]:
-                msg_str = ''.join(self.client_msgs[conn.fileno()])
+        # Create the clipster dir if necessary
+        try:
+            os.makedirs(self.config.get('clipster', 'data_dir'))
+        except OSError as exc:
+            if exc.errno == errno.EEXIST:
+                # ok if directory already exists
+                pass
+
+        # check for existing pid_file, and tidy up if appropriate
+        try:
+            with open(self.pid_file, 'r') as runf_r:
+                pid = int(runf_r.read())
                 try:
-                    sig, board, count, content = msg_str.split(':', 3)
-                    count = int(count)
-                except ValueError:
-                    logging.error("Invalid message received via socket - ignoring")
-                else:
-                    logging.debug("Received: sig:%s, board:%s, count:%s", sig, board, count)
-                    if sig == "SELECT":
-                        self.selection_widget(board)
-                    elif sig == "BOARD":
-                        if content:
-                            logging.debug("Received content: %s", content)
-                            self.update_board(board, content)
-                        elif count:
-                            logging.debug("Sending requested selection(s): %s",
-                                          self.boards[board][-count:])
-                            # Send list (reversed) as json to preserve structure
-                            conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
-                del self.client_msgs[conn.fileno()]
-
-        def prepare_files(self):
-            """Ensure that all files and sockets used
-            by the daemon are available."""
-
-            # Create the clipster dir if necessary
-            try:
-                os.makedirs(self.config.get('clipster', 'data_dir'))
-            except OSError as exc:
-                if exc.errno == errno.EEXIST:
-                    # ok if directory already exists
-                    pass
-
-            # check for existing pid_file, and tidy up if appropriate
-            try:
-                with open(self.pid_file, 'r') as runf_r:
-                    pid = int(runf_r.read())
+                    # Do nothing, but raise an error if no such process
+                    os.kill(pid, 0)
+                    raise ClipsterError("Daemon already running: pid {}".format(pid))
+                except OSError:
                     try:
-                        # Do nothing, but raise an error if no such process
-                        os.kill(pid, 0)
-                        raise ClipsterError("Daemon already running: pid {}".format(pid))
-                    except OSError:
-                        try:
-                            os.unlink(self.pid_file)
-                        except IOError as exc:
-                            if exc.errno == errno.ENOENT:
-                                # File already gone
-                                pass
-                            else:
-                                raise
+                        os.unlink(self.pid_file)
+                    except IOError as exc:
+                        if exc.errno == errno.ENOENT:
+                            # File already gone
+                            pass
+                        else:
+                            raise
+        except IOError as exc:
+            if exc.errno == errno.ENOENT:
+                pass
+
+        # Create pid file
+        with open(self.pid_file, 'w') as runf_w:
+            runf_w.write(str(os.getpid()))
+
+        # Read in history from file
+        self.read_history_file()
+
+        # Create the socket
+        try:
+            os.unlink(self.sock_file)
+        except OSError as exc:
+            if exc.errno == errno.ENOENT:
+                pass
+
+        self.sock_s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock_s.bind(self.sock_file)
+        os.chmod(self.sock_file, stat.S_IRUSR | stat.S_IWUSR)
+        self.sock_s.listen(5)
+
+        # Read in patterns file
+        if self.config.getboolean('clipster', 'extract_patterns'):
+            try:
+                patfile = os.path.join(self.config.get('clipster', 'data_dir'), 'patterns')
+                with open(patfile, 'r') as pat_f:
+                    self.patterns = [x.strip() for x in pat_f.read().splitlines()]
+                    logging.debug("Loaded patterns: %s", ','.join(self.patterns))
+
             except IOError as exc:
-                if exc.errno == errno.ENOENT:
-                    pass
+                logging.warn("Unable to read patterns file: %s %s", patfile, exc.strerror)
 
-            # Create pid file
-            with open(self.pid_file, 'w') as runf_w:
-                runf_w.write(str(os.getpid()))
+    def exit(self):
+        """Clean up things before exiting."""
 
-            # Read in history from file
-            self.read_history_file()
+        logging.debug("Daemon exiting...")
+        try:
+            os.unlink(self.sock_file)
+        except OSError:
+            logging.warning("Failed to remove socket file: %s", self.sock_file)
+        try:
+            os.unlink(self.pid_file)
+        except OSError:
+            logging.warning("Failed to remove run file: %s", self.pid_file)
+        try:
+            self.write_history_file()
+        except OSError:
+            logging.warning("Failed to upodate history file: %s", self.hist_file)
+        Gtk.main_quit()
 
-            # Create the socket
-            try:
-                os.unlink(self.sock_file)
-            except OSError as exc:
-                if exc.errno == errno.ENOENT:
-                    pass
+    def run(self):
+        """Launch the clipboard manager daemon.
+        Listen for clipboard events & client socket connections."""
 
-            self.sock_s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.sock_s.bind(self.sock_file)
-            os.chmod(self.sock_file, stat.S_IRUSR | stat.S_IWUSR)
-            self.sock_s.listen(5)
+        # Set up socket, pid file etc
+        self.prepare_files()
 
-            # Read in patterns file
-            if self.config.getboolean('clipster', 'extract_patterns'):
-                try:
-                    patfile = os.path.join(self.config.get('clipster', 'data_dir'), 'patterns')
-                    with open(patfile, 'r') as pat_f:
-                        self.patterns = [x.strip() for x in pat_f.read().splitlines()]
-                        logging.debug("Loaded patterns: %s", ','.join(self.patterns))
+        # We need to get the display instance from the window
+        # for use in obtaining mouse state.
+        # POPUP windows can do this without having to first show the window
+        self.window = Gtk.Window(type=Gtk.WindowType.POPUP)
 
-                except IOError as exc:
-                    logging.warn("Unable to read patterns file: %s %s", patfile, exc.strerror)
+        # Handle clipboard changes
+        self.p_id = self.primary.connect('owner-change',
+                                         self.owner_change)
+        self.c_id = self.clipboard.connect('owner-change',
+                                           self.owner_change)
+        # Handle socket connections
+        GObject.io_add_watch(self.sock_s, GObject.IO_IN,
+                             self.socket_accept)
+        # Handle unix signals
+        GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGINT, self.exit)
+        GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, self.exit)
 
-        def exit(self):
-            """Clean up things before exiting."""
+        # Timeout for flushing history to disk
+        # Do nothing if timeout is 0, or write_on_change is set in config
+        history_timeout = self.config.getint('clipster', 'history_update_interval')
+        if history_timeout and not self.config.getboolean('clipster', 'write_on_change'):
+            logging.debug("Writing history file every %s seconds", history_timeout)
+            GObject.timeout_add_seconds(history_timeout,
+                                        self.write_history_file)
 
-            logging.debug("Daemon exiting...")
-            try:
-                os.unlink(self.sock_file)
-            except OSError:
-                logging.warning("Failed to remove socket file: %s", self.sock_file)
-            try:
-                os.unlink(self.pid_file)
-            except OSError:
-                logging.warning("Failed to remove run file: %s", self.pid_file)
-            try:
-                self.write_history_file()
-            except OSError:
-                logging.warning("Failed to upodate history file: %s", self.hist_file)
-            Gtk.main_quit()
-
-        def run(self):
-            """Launch the clipboard manager daemon.
-            Listen for clipboard events & client socket connections."""
-
-            # Set up socket, pid file etc
-            self.prepare_files()
-
-            # We need to get the display instance from the window
-            # for use in obtaining mouse state.
-            # POPUP windows can do this without having to first show the window
-            self.window = Gtk.Window(type=Gtk.WindowType.POPUP)
-
-            # Handle clipboard changes
-            self.p_id = self.primary.connect('owner-change',
-                                             self.owner_change)
-            self.c_id = self.clipboard.connect('owner-change',
-                                               self.owner_change)
-            # Handle socket connections
-            GObject.io_add_watch(self.sock_s, GObject.IO_IN,
-                                 self.socket_accept)
-            # Handle unix signals
-            GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGINT, self.exit)
-            GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, self.exit)
-
-            # Timeout for flushing history to disk
-            # Do nothing if timeout is 0, or write_on_change is set in config
-            history_timeout = self.config.getint('clipster', 'history_update_interval')
-            if history_timeout and not self.config.getboolean('clipster', 'write_on_change'):
-                logging.debug("Writing history file every %s seconds", history_timeout)
-                GObject.timeout_add_seconds(history_timeout,
-                                            self.write_history_file)
-
-            Gtk.main()
+        Gtk.main()
 
 
 def parse_args():
@@ -612,12 +612,12 @@ def main():
 
     config = parse_config(args, data_dir)
 
-    clipster = Clipster(config, args)
+    client = Client(config, args)
 
     # Launch the daemon
     if args.daemon:
         try:
-            clipster.Daemon(config).run()
+            Daemon(config).run()
             return 0
         except ClipsterError as exc:
             logging.error(exc)
@@ -645,7 +645,7 @@ def main():
         else:
             try:
                 # Ask server for clipboard history
-                print(clipster.client_output(client_action, args.number), end='')
+                print(client.client_output(client_action, args.number), end='')
             except ClipsterError as exc:
                 logging.error(exc)
                 return 1
@@ -653,7 +653,7 @@ def main():
     else:
         try:
             # Read from stdin and send to server
-            clipster.client_update(client_action)
+            client.client_update(client_action)
         except ClipsterError as exc:
             logging.error(exc)
             return 1
