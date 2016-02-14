@@ -27,6 +27,13 @@ except ImportError:
     import ConfigParser as configparser
 
 
+class ClipsterError(Exception):
+    """Errors specific to Clipster."""
+
+    def __init__(self, args="Clipster Error."):
+        Exception.__init__(self, args)
+
+
 class Clipster(object):
     """Clipboard Manager."""
 
@@ -42,8 +49,7 @@ class Clipster(object):
         try:
             self.sock_c.connect(self.config.get('clipster', "socket_file"))
         except socket.error:
-            logging.error("Error connecting to socket. Is daemon running?")
-            sys.exit(1)
+            raise ClipsterError("Error connecting to socket. Is daemon running?")
         logging.debug("Sending request to server.")
         # Fix for http://bugs.python.org/issue1633941 in py 2.x
         # Send message 'header' - count is 0 (i.e to be ignored)
@@ -71,8 +77,7 @@ class Clipster(object):
         try:
             self.sock_c.connect(self.config.get('clipster', "socket_file"))
         except socket.error:
-            logging.error("Error connecting to socket. Is daemon running?")
-            sys.exit(1)
+            raise ClipsterError("Error connecting to socket. Is daemon running?")
         logging.debug("Sending request to server.")
         # Send message 'header'
         self.sock_c.sendall("{0}:{1}:{2}:".format(client_action,
@@ -411,8 +416,7 @@ class Clipster(object):
                     try:
                         # Do nothing, but raise an error if no such process
                         os.kill(pid, 0)
-                        logging.error("Daemon already running: pid %s", pid)
-                        sys.exit(1)
+                        raise ClipsterError("Daemon already running: pid {}".format(pid))
                     except OSError:
                         try:
                             os.unlink(self.pid_file)
@@ -472,7 +476,7 @@ class Clipster(object):
                 self.write_history_file()
             except OSError:
                 logging.warning("Failed to upodate history file: %s", self.hist_file)
-            sys.exit(0)
+            Gtk.main_quit()
 
         def run(self):
             """Launch the clipboard manager daemon.
@@ -588,9 +592,8 @@ def find_config():
     return conf_file, data_dir
 
 
-
 def main():
-    """Start the application."""
+    """Start the application. Return an exit status (0 or 1)."""
 
     # Find default config file and data dir
     conf_file, data_dir = find_config()
@@ -613,7 +616,12 @@ def main():
 
     # Launch the daemon
     if args.daemon:
-        clipster.Daemon(config).run()
+        try:
+            clipster.Daemon(config).run()
+            return 0
+        except ClipsterError as exc:
+            logging.error(exc)
+            return 1
 
     client_action = "BOARD"
     if args.select:
@@ -622,26 +630,33 @@ def main():
     if args.primary:
         if 'PRIMARY' not in config.get('clipster', 'active_selections'):
             logging.error("PRIMARY not in 'active_selections' in config.")
-            sys.exit(1)
+            return 1
         config.set('clipster', 'default_selection', 'PRIMARY')
     elif args.clipboard:
         if 'CLIPBOARD' not in config.get('clipster', 'active_selections'):
             logging.error("CLIPBOARD not in active_selections' in config.")
-            sys.exit(1)
+            return 1
         config.set('clipster', 'default_selection', 'CLIPBOARD')
 
     if args.output:
         if args.select:
             logging.error("Can't use --select and --output together.")
-            sys.exit(1)
+            return 1
         else:
-            # Ask server for clipboard history
-            print(clipster.client_output(client_action, args.number), end='')
+            try:
+                # Ask server for clipboard history
+                print(clipster.client_output(client_action, args.number), end='')
+            except ClipsterError as exc:
+                logging.error(exc)
+                return 1
 
     else:
-        # Read from stdin and send to server
-        clipster.client_update(client_action)
-
+        try:
+            # Read from stdin and send to server
+            clipster.client_update(client_action)
+        except ClipsterError as exc:
+            logging.error(exc)
+            return 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
