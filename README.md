@@ -147,6 +147,10 @@ extract_emails = yes
 # Extract patterns (as specified in patterns file: clipster_dir/patterns) and add them to the default clipboard
 extract_patterns = no
 
+# Comma-separated list of WM_CLASS properties for apps where clipboard changes should be ignored.
+# Used to ignore clipboard changes from sensitive apps, e.g. password managers.
+filter_classes = ""
+
 ```
 
 ## Using Clipster
@@ -226,6 +230,24 @@ As well as the `extract_uris` and `extract_emails` options, there is a general-p
 The `patterns` file expects one regular expression per line. Do not add any comments, quote-marks or delimiters (e.g. `/`) unles these are part of your pattern.
 
 For example, to match all numbers within the selection text, add `\d+` to the `patterns` file.
+
+
+## Application Filtering
+
+Clipster can ignore clipboard changes from applications based on their WM_CLASS property. This is useful for sensitive apps such as password managers, where you do not want clipster saving the text into the history file.
+
+To determine the WM_CLASS for an application:
+
+1. run your app
+2. In a new terminal, run `xprop`. A small cross-hair will appear.
+3. Click on your app.
+4. Note down the *second* value of the `WM_CLASS(STRING)` field.
+
+For example, to ignore keepass2, emacs and firefox, add the following list to your config file:
+
+```
+filter_classes = KeePass2,Emacs24,Firefox
+```
 
 
 ## Bugs & Improvements
