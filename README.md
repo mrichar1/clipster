@@ -35,6 +35,8 @@ Clipster was designed to try to add a good selection of useful features, while a
 
 * Option to ignore clipboard updates form certain applications. (`filter_classes`)
 
+* Ability to delete items in clipboard history.
+
 
 New feature requests always welcome! See `Bugs & Improvements` at the end of this document.
 

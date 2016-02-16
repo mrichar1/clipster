@@ -126,21 +126,61 @@ class Daemon(object):
         # Flag to indicate that the in-memory history should be flushed to disk
         self.update_history_file = False
 
-    def keypress_handler(self, widget, event):
-        """Handler for selection_widget keypress events."""
+    def keypress_handler(self, widget, event, board, tree_select):
+        """Handle selection_widget keypress events."""
 
+        # Handle select with return or mouse
+        if event.keyval == Gdk.KEY_Return:
+            self.activate_handler(board, tree_select)
+        # Delete items from history
+        if event.keyval == Gdk.KEY_Delete:
+            self.delete_handler(board, tree_select)
         # Hide window if ESC is pressed
         if event.keyval == Gdk.KEY_Escape:
             self.window.hide()
 
-    def selection_handler(self, tree, path, col, board):
-        """Handler for selection widget 'select' event."""
+    def delete_handler(self, board, tree_select):
+        """Delete selected history entries."""
+
+        model, treepaths = tree_select.get_selected_rows()
+        treeiters = [model.get_iter(x) for x in treepaths]
+        for treeiter in treeiters:
+            item = model[treeiter][1]
+            logging.debug("Deleting history entry: %s", item)
+            # If deleted item is currently on the clipboard, clear it
+            if getattr(self, board.lower()).wait_for_text() == item:
+                self.update_board(board)
+            # Remove item from history
+            self.boards[board].remove(item)
+            if self.config.getboolean('clipster', 'sync_selections'):
+                # find the 'other' board
+                board_list = self.boards.keys()
+                board_list.remove(board)
+                # Is the other board active? If so, delete item from its history too
+                if board_list[0] in self.config.get('clipster', 'active_selections'):
+                    logging.debug("Synchronising delete to other board.")
+                    # Remove item for history
+                    self.boards[board_list[0]].remove(item)
+                    # If deleted item is current on the clipboard, clear it
+                    if getattr(self, board_list[0].lower()).wait_for_text() == item:
+                        self.update_board(board)
+            # Remove entry from UI
+            model.remove(treeiter)
+            # Flag the history file for updating
+            self.update_history_file = True
+
+    def activate_handler(self, board, tree_select):
+        """Action selected history items."""
 
         # Get selection
-        model, treeiter = tree.get_selection().get_selected()
-        # Select full text from row
-        data = model[treeiter][1]
-        self.update_board(board, data)
+        model, treepaths = tree_select.get_selected_rows()
+        treeiters = [model.get_iter(x) for x in treepaths]
+        # Step over list in reverse, moving to top of board
+        for treeiter in treeiters[::-1]:
+            # Select full text from row
+            data = model[treeiter][1]
+            self.update_board(board, data)
+            self.update_history(board, data)
         model.clear()
         self.window.hide()
 
@@ -154,8 +194,10 @@ class Daemon(object):
         scrolled = Gtk.ScrolledWindow()
         model = Gtk.ListStore(str, str)
         tree = Gtk.TreeView(model)
+        tree_select = tree.get_selection()
+        tree_select.set_mode(Gtk.SelectionMode.MULTIPLE)
         renderer = Gtk.CellRendererText()
-        column = Gtk.TreeViewColumn("{0} clipboard:".format(board),
+        column = Gtk.TreeViewColumn("{0} clipboard:\n <ret> to activate, <del> to remove, <esc> to exit.".format(board),
                                     renderer, markup=0)
 
         # Add rows to the model
@@ -170,10 +212,8 @@ class Daemon(object):
             # Add label and full text to model
             model.append([label, item])
 
-        # Handle keypresses (looking for escape key)
-        self.window.connect("key-press-event", self.keypress_handler)
-        # Row is clicked on, or enter pressed
-        tree.connect("row-activated", self.selection_handler, board)
+        # Handle keypresses
+        self.window.connect("key-press-event", self.keypress_handler, board, tree_select)
 
         # Format, connect and show windows
         # Allow alternating color for rows, if WM theme supports it
