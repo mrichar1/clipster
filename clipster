@@ -340,16 +340,18 @@ class Daemon(object):
             # Read clipboard
             if event.reason != Gdk.OwnerChange.NEW_OWNER:
                 # CLOSE or DESTROY event
-                logging.debug("Clipboard cleared. Reinstating from history.")
-                self.update_board(selection, self.boards[selection][-1])
+                if self.boards[selection][-1]:
+                    logging.debug("Clipboard cleared. Reinstating from history.")
+                    self.update_board(selection, self.boards[selection][-1])
             elif board.wait_is_text_available():
                 logging.debug("Selection is text.")
                 text = board.wait_for_text()
                 if text:
                     self.update_history(selection, text)
                 else:
-                    logging.debug("Selection empty. Reinstating from history.")
-                    self.update_board(selection, self.boards[selection][-1])
+                    if self.boards[selection][-1]:
+                        logging.debug("Selection empty. Reinstating from history.")
+                        self.update_board(selection, self.boards[selection][-1])
             else:
                 logging.debug("Selection is not text - ignoring.")
 
