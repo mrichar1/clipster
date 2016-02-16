@@ -228,8 +228,17 @@ class Daemon(object):
         # Handle window delete event
         self.window.connect('delete_event', lambda x: self.window.hide())
 
+        # Add a 'select' button
+        select_btn = Gtk.Button.new_with_label("Select")
+        select_btn.connect("clicked", self.activate_handler, board, tree_select)
+
+        # Add a box to hold buttons
+        button_box = Gtk.Box()
+        button_box.pack_start(select_btn, True, False, 0)
+
         # GtkDialog comes with a vbox already active, so pack into this
         self.window.vbox.pack_start(scrolled, True, True, 0)
+        self.window.vbox.pack_start(button_box, False, False, 0)
         self.window.set_size_request(500, 500)
         self.window.show_all()
 
