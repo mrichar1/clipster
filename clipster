@@ -169,20 +169,21 @@ class Daemon(object):
             # Flag the history file for updating
             self.update_history_file = True
 
-    def activate_handler(self, board, tree_select):
+    def activate_handler(self, event, board, tree_select):
         """Action selected history items."""
 
         # Get selection
         model, treepaths = tree_select.get_selected_rows()
         treeiters = [model.get_iter(x) for x in treepaths]
-        # Step over list in reverse, moving to top of board
-        for treeiter in treeiters[::-1]:
-            # Select full text from row
-            data = model[treeiter][1]
-            self.update_board(board, data)
-            self.update_history(board, data)
-        model.clear()
-        self.window.hide()
+        if treeiters:
+            # Step over list in reverse, moving to top of board
+            for treeiter in treeiters[::-1]:
+                # Select full text from row
+                data = model[treeiter][1]
+                self.update_board(board, data)
+                self.update_history(board, data)
+            model.clear()
+            self.window.hide()
 
     def selection_widget(self, board):
         """GUI window for selecting items from clipboard history."""
