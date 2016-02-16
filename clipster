@@ -131,15 +131,15 @@ class Daemon(object):
 
         # Handle select with return or mouse
         if event.keyval == Gdk.KEY_Return:
-            self.activate_handler(board, tree_select)
+            self.activate_handler(event, board, tree_select)
         # Delete items from history
         if event.keyval == Gdk.KEY_Delete:
-            self.delete_handler(board, tree_select)
+            self.delete_handler(event, board, tree_select)
         # Hide window if ESC is pressed
         if event.keyval == Gdk.KEY_Escape:
             self.window.hide()
 
-    def delete_handler(self, board, tree_select):
+    def delete_handler(self, event, board, tree_select):
         """Delete selected history entries."""
 
         model, treepaths = tree_select.get_selected_rows()
