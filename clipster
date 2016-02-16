@@ -62,7 +62,7 @@ class Client(object):
                                                 self.config.get('clipster',
                                                                 'default_selection')).encode('utf-8'))
 
-        if client_action is not "SELECT":
+        if client_action != "SELECT":
             # Send data read from stdin
             buf_size = 8192
             while True:
