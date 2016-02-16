@@ -7,8 +7,12 @@
 from __future__ import print_function
 from gi import require_version
 require_version("Gtk", "3.0")
-require_version("Wnck", "3.0")
-from gi.repository import Gtk, Gdk, GLib, GObject, Wnck
+from gi.repository import Gtk, Gdk, GLib, GObject
+try:
+    require_version("Wnck", "3.0")
+    from gi.repository import Wnck
+except (ImportError, ValueError):
+    Wnck = None
 import signal
 import argparse
 import json
@@ -105,6 +109,7 @@ class Client(object):
             if self.args.nul:
                 delim = '\x00'
             return delim.join(json.loads(''.join(data)))
+
 
 class Daemon(object):
     """Handles clipboard events, client requests, stores history."""
@@ -364,14 +369,18 @@ class Daemon(object):
             # Ignore owner-change events for apps with certain WM_CLASS values
             if self.config.get('clipster', 'filter_classes'):
                 classes = self.config.get('clipster', 'filter_classes').lower().split(',')
-                logging.debug("Filter classes enabled for: %s", classes)
-                screen = Wnck.Screen.get_default()
-                screen.force_update()
-                active_window = screen.get_active_window()
-                wm_class = active_window.get_class_group_name()
-                logging.debug("Active window class is %s", wm_class)
-                if wm_class.lower() in classes:
-                    logging.debug("Ignoring active window.")
+                if Wnck:
+                    logging.debug("Filter classes enabled for: %s", classes)
+                    screen = Wnck.Screen.get_default()
+                    screen.force_update()
+                    active_window = screen.get_active_window()
+                    wm_class = active_window.get_class_group_name()
+                    logging.debug("Active window class is %s", wm_class)
+                    if wm_class.lower() in classes:
+                        logging.debug("Ignoring active window.")
+                        return True
+                else:
+                    logging.error("'filter_classes' requires Wnck (libwnck3).")
                     return True
 
             logging.debug("Selection in 'active_selections'")
@@ -639,7 +648,6 @@ def parse_config(args, data_dir):
                        "extract_emails": "yes",  # Extract emails within selection text
                        "extract_patterns": "no",  # Extract patterns based on regexes stored in data_dir/patterns (one per line).
                        "filter_classes": ""}  # Comma-separated list of WM_CLASS to identify apps from which to ignore owner-change events
-
 
     config = configparser.SafeConfigParser(config_defaults)
     config.add_section('clipster')
