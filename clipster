@@ -224,6 +224,10 @@ class Daemon(object):
 
         tree.append_column(column)
         scrolled.add(tree)
+
+        # Handle window delete event
+        self.window.connect('delete_event', lambda x: self.window.hide())
+
         # GtkDialog comes with a vbox already active, so pack into this
         self.window.vbox.pack_start(scrolled, True, True, 0)
         self.window.set_size_request(500, 500)
