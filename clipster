@@ -217,7 +217,7 @@ class Daemon(object):
         # Return true to make the timeout handler recur
         return True
 
-    def update_board(self, board, data):
+    def update_board(self, board, data=""):
         """Update a clipboard."""
 
         getattr(self, board.lower()).set_text(data, -1)
