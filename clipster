@@ -253,9 +253,9 @@ class Daemon(object):
             with open(self.hist_file, 'r') as hist_f:
                 self.boards.update(json.load(hist_f))
         except IOError as exc:
-            if exc.errno == errno.ENOENT:
+            if exc.errno != errno.ENOENT:
                 # Not an error if there is no history file
-                pass
+                raise
 
     def write_history_file(self):
         """Write clipboard history to file."""
@@ -489,9 +489,9 @@ class Daemon(object):
         try:
             os.makedirs(self.config.get('clipster', 'data_dir'))
         except OSError as exc:
-            if exc.errno == errno.EEXIST:
+            if exc.errno != errno.EEXIST:
                 # ok if directory already exists
-                pass
+                raise
 
         # check for existing pid_file, and tidy up if appropriate
         try:
@@ -505,14 +505,12 @@ class Daemon(object):
                     try:
                         os.unlink(self.pid_file)
                     except IOError as exc:
-                        if exc.errno == errno.ENOENT:
+                        if exc.errno != errno.ENOENT:
                             # File already gone
-                            pass
-                        else:
                             raise
         except IOError as exc:
-            if exc.errno == errno.ENOENT:
-                pass
+            if exc.errno != errno.ENOENT:
+                raise
 
         # Create pid file
         with open(self.pid_file, 'w') as runf_w:
@@ -525,8 +523,8 @@ class Daemon(object):
         try:
             os.unlink(self.sock_file)
         except OSError as exc:
-            if exc.errno == errno.ENOENT:
-                pass
+            if exc.errno != errno.ENOENT:
+                raise
 
         self.sock_s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock_s.bind(self.sock_file)
