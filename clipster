@@ -119,7 +119,7 @@ class Daemon(object):
         self.sock_file = self.config.get('clipster', 'socket_file')
         self.primary = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
         self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-        self.boards = {"PRIMARY": [""], "CLIPBOARD": [""]}
+        self.boards = {"PRIMARY": [], "CLIPBOARD": []}
         self.hist_file = self.config.get('clipster', 'history_file')
         self.pid_file = self.config.get('clipster', 'pid_file')
         self.client_msgs = {}
@@ -250,7 +250,11 @@ class Daemon(object):
 
         self.de_duplicate(board, text)
         diff = self.config.getint('clipster', 'smart_update')
-        last_item = self.boards[board][-1]
+        try:
+            last_item = self.boards[board][-1]
+        except IndexError:
+            # List was empty
+            last_item = ''
         if text.startswith(last_item) or last_item.startswith(text):
             # Make length difference a positive number before comparing
             if abs(len(text) - len(last_item)) <= diff:
@@ -338,9 +342,13 @@ class Daemon(object):
                     pass
 
             # Read clipboard
+            try:
+                last_item = self.boards[selection][-1]
+            except IndexError:
+                last_item = ""
             if event.reason != Gdk.OwnerChange.NEW_OWNER:
                 # CLOSE or DESTROY event
-                if self.boards[selection][-1]:
+                if last_item:
                     logging.debug("Clipboard cleared. Reinstating from history.")
                     self.update_board(selection, self.boards[selection][-1])
             elif board.wait_is_text_available():
@@ -349,9 +357,9 @@ class Daemon(object):
                 if text:
                     self.update_history(selection, text)
                 else:
-                    if self.boards[selection][-1]:
+                    if last_item:
                         logging.debug("Selection empty. Reinstating from history.")
-                        self.update_board(selection, self.boards[selection][-1])
+                        self.update_board(selection, last_item)
             else:
                 logging.debug("Selection is not text - ignoring.")
 
