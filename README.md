@@ -27,7 +27,13 @@ Clipster was designed to try to add a good selection of useful features, while a
 
 * Proper handling of embedded newlines and control codes.
 
-* Smart matching of urls, emails, regexes.
+* Smart matching of urls, emails, regexes. (`extract_*`)
+
+* Option to synchronise the SELECTION and CLIPBOARD clipboards. (`sync_selections`)
+
+* Option to track one or both clipboards.  (`active_selections`)
+
+* Option to ignore clipboard updates form certain applications. (`filter_classes`)
 
 
 New feature requests always welcome! See `Bugs & Improvements` at the end of this document.
