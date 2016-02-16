@@ -394,15 +394,12 @@ class Daemon(object):
             # FIXME: this devs hack is a bit verbose. Look instead at
             # gdk_seat_get_pointer -> gdk_device_get_state
             # once GdkSeat is in stable
-            mouse = None
             for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
                 if dev.get_source() == Gdk.InputSource.MOUSE:
-                    mouse = dev
-                    break
-            if mouse:
-                while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(mouse)[3]:
-                    # Do nothing while mouse button is held down (selection drag)
-                    pass
+                    while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(mouse)[3]:
+                        # Do nothing while mouse button is held down (selection drag)
+                        pass
+                break
 
             # Read clipboard
             try:
