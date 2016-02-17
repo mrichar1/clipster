@@ -428,10 +428,7 @@ class Daemon(object):
                     return True
 
             logging.debug("Selection in 'active_selections'")
-            if selection == "PRIMARY":
-                event_id = self.p_id
-            else:
-                event_id = self.c_id
+            event_id = selection == "PRIMARY" and self.p_id or self.c_id
             # Some apps update primary during mouse drag (chrome)
             # Block at start to prevent repeated triggering
             board.handler_block(event_id)
@@ -730,9 +727,7 @@ def main():
             logging.error(exc)
             return 1
 
-    client_action = "BOARD"
-    if args.select:
-        client_action = "SELECT"
+    client_action = args.select and "SELECT" or "BOARD"
 
     if args.primary:
         if 'PRIMARY' not in config.get('clipster', 'active_selections'):
