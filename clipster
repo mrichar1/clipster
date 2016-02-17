@@ -30,6 +30,11 @@ try:
 except ImportError:
     # py 2.x
     import ConfigParser as configparser
+    # Use this as a handy place to make some other compatibility hacks
+    # In python 2, ENOENT is sometimes IOError and sometimes OSError. Catch
+    # both by catching their immediate superclass exception EnvironmentError.
+    FileNotFoundError = EnvironmentError
+    FileExistsError = ProcessLookupError = OSError
 
 
 class ClipsterError(Exception):
@@ -252,7 +257,7 @@ class Daemon(object):
         try:
             with open(self.hist_file, 'r') as hist_f:
                 self.boards.update(json.load(hist_f))
-        except IOError as exc:
+        except FileNotFoundError as exc:
             if exc.errno != errno.ENOENT:
                 # Not an error if there is no history file
                 raise
@@ -488,7 +493,7 @@ class Daemon(object):
         # Create the clipster dir if necessary
         try:
             os.makedirs(self.config.get('clipster', 'data_dir'))
-        except OSError as exc:
+        except FileExistsError as exc:
             if exc.errno != errno.EEXIST:
                 # ok if directory already exists
                 raise
@@ -501,14 +506,16 @@ class Daemon(object):
                     # Do nothing, but raise an error if no such process
                     os.kill(pid, 0)
                     raise ClipsterError("Daemon already running: pid {}".format(pid))
-                except OSError:
+                except ProcessLookupError as exc:
+                    if exc.errno != errno.ESRCH:
+                        raise
                     try:
                         os.unlink(self.pid_file)
-                    except IOError as exc:
+                    except FileNotFoundError as exc:
                         if exc.errno != errno.ENOENT:
                             # File already gone
                             raise
-        except IOError as exc:
+        except FileNotFoundError as exc:
             if exc.errno != errno.ENOENT:
                 raise
 
@@ -522,7 +529,7 @@ class Daemon(object):
         # Create the socket
         try:
             os.unlink(self.sock_file)
-        except OSError as exc:
+        except FileNotFoundError as exc:
             if exc.errno != errno.ENOENT:
                 raise
 
@@ -539,7 +546,7 @@ class Daemon(object):
                     self.patterns = [x.strip() for x in pat_f.read().splitlines()]
                     logging.debug("Loaded patterns: %s", ','.join(self.patterns))
 
-            except IOError as exc:
+            except FileNotFoundError as exc:
                 logging.warn("Unable to read patterns file: %s %s", patfile, exc.strerror)
 
     def exit(self):
@@ -548,16 +555,16 @@ class Daemon(object):
         logging.debug("Daemon exiting...")
         try:
             os.unlink(self.sock_file)
-        except OSError:
+        except FileNotFoundError as exc:
             logging.warning("Failed to remove socket file: %s", self.sock_file)
         try:
             os.unlink(self.pid_file)
-        except OSError:
-            logging.warning("Failed to remove run file: %s", self.pid_file)
+        except FileNotFoundError as exc:
+            logging.warning("Failed to remove pid file: %s", self.pid_file)
         try:
             self.write_history_file()
-        except OSError:
-            logging.warning("Failed to upodate history file: %s", self.hist_file)
+        except FileNotFoundError as exc:
+            logging.warning("Failed to update history file: %s", self.hist_file)
         Gtk.main_quit()
 
     def run(self):
