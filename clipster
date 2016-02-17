@@ -164,7 +164,7 @@ class Daemon(object):
     def __init__(self, config):
         """Set up clipboard objects and history dict."""
         self.config = config
-        self.patterns = None
+        self.patterns = []
         self.window = self.p_id = self.c_id = self.sock_s = None
         self.sock_file = self.config.get('clipster', 'socket_file')
         self.primary = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
