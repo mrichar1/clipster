@@ -37,6 +37,46 @@ except ImportError:
     FileExistsError = ProcessLookupError = OSError
 
 
+class suppress_if_errno:
+    """A context manager which suppresses exceptions with an errno attribute which matches the given value.
+
+    Allows things like:
+
+        try:
+            os.makedirs(dirs)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
+
+    to be expressed as:
+
+        with suppress_if_errno(OSError, errno.EEXIST):
+            os.makedirs(dir)
+
+    This is a fork of contextlib.suppress.
+
+    """
+
+    def __init__(self, exceptions, exc_val):
+        self._exceptions = exceptions
+        self._exc_val = exc_val
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exctype, excinst, exctb):
+        # Unlike isinstance and issubclass, CPython exception handling
+        # currently only looks at the concrete type hierarchy (ignoring
+        # the instance and subclass checking hooks). While Guido considers
+        # that a bug rather than a feature, it's a fairly hard one to fix
+        # due to various internal implementation details. suppress provides
+        # the simpler issubclass based semantics, rather than trying to
+        # exactly reproduce the limitations of the CPython interpreter.
+        #
+        # See http://bugs.python.org/issue12029 for more details
+        return exctype is not None and issubclass(exctype, self._exceptions) and excinst.errno == self._exc_val
+
+
 class ClipsterError(Exception):
     """Errors specific to Clipster."""
 
@@ -491,15 +531,11 @@ class Daemon(object):
         by the daemon are available."""
 
         # Create the clipster dir if necessary
-        try:
+        with suppress_if_errno(FileExistsError, errno.EEXIST):
             os.makedirs(self.config.get('clipster', 'data_dir'))
-        except FileExistsError as exc:
-            if exc.errno != errno.EEXIST:
-                # ok if directory already exists
-                raise
 
         # check for existing pid_file, and tidy up if appropriate
-        try:
+        with suppress_if_errno(FileNotFoundError, errno.ENOENT):
             with open(self.pid_file, 'r') as runf_r:
                 pid = int(runf_r.read())
                 try:
@@ -509,15 +545,8 @@ class Daemon(object):
                 except ProcessLookupError as exc:
                     if exc.errno != errno.ESRCH:
                         raise
-                    try:
+                    with suppress_if_errno(FileNotFoundError, errno.ENOENT):
                         os.unlink(self.pid_file)
-                    except FileNotFoundError as exc:
-                        if exc.errno != errno.ENOENT:
-                            # File already gone
-                            raise
-        except FileNotFoundError as exc:
-            if exc.errno != errno.ENOENT:
-                raise
 
         # Create pid file
         with open(self.pid_file, 'w') as runf_w:
@@ -527,11 +556,8 @@ class Daemon(object):
         self.read_history_file()
 
         # Create the socket
-        try:
+        with suppress_if_errno(FileNotFoundError, errno.ENOENT):
             os.unlink(self.sock_file)
-        except FileNotFoundError as exc:
-            if exc.errno != errno.ENOENT:
-                raise
 
         self.sock_s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock_s.bind(self.sock_file)
