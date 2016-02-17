@@ -365,16 +365,15 @@ class Daemon(object):
                 logging.debug("smart-update: removing.")
                 # new selection is a longer/shorter version of previous
                 self.boards[board].pop()
-        if self.patterns:
-            for pattern in self.patterns:
-                try:
-                    for match in set(re.findall(pattern, text)):
-                        if match != text:
-                            logging.debug("Pattern '%s' matched in: %s", pattern, text)
-                            self.de_duplicate(board, match)
-                            self.boards[board].append(match)
-                except re.error as exc:
-                    logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.message)
+        for pattern in self.patterns:
+            try:
+                for match in set(re.findall(pattern, text)):
+                    if match != text:
+                        logging.debug("Pattern '%s' matched in: %s", pattern, text)
+                        self.de_duplicate(board, match)
+                        self.boards[board].append(match)
+            except re.error as exc:
+                logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.message)
         if self.config.getboolean('clipster', 'extract_uris'):
             # Simple uri regex
             url_re = r'\b\S+://\S+\b'
