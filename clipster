@@ -276,7 +276,7 @@ class Daemon(object):
         self.window.connect("key-press-event", self.keypress_handler, board, tree_select)
 
         # Handle window delete event
-        self.window.connect('delete_event', lambda x: self.window.hide())
+        self.window.connect('delete_event', self.window.hide)
 
         # Add a 'select' button
         select_btn = Gtk.Button.new_with_label("Select")
