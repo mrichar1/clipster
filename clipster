@@ -334,7 +334,7 @@ class Daemon(object):
                 getattr(self, boards[0].lower()).set_text(data, -1)
 
     def de_duplicate(self, board, text):
-        """If an text already exists in the clipboard, remove it."""
+        """If text already exists in the clipboard, remove it."""
 
         if not self.config.getboolean('clipster', 'duplicates'):
             if text in self.boards[board]:
