@@ -474,6 +474,7 @@ class Daemon(object):
         self.client_msgs[conn.fileno()] = []
         GObject.io_add_watch(conn, GObject.IO_IN,
                              self.socket_recv)
+        logging.debug("Client connection received.")
         return True
 
     def socket_recv(self, conn, _):
@@ -484,7 +485,6 @@ class Daemon(object):
             recv = conn.recv(8192)
             recv_total += len(recv)
             self.client_msgs[conn.fileno()].append(recv.decode('utf-8'))
-            logging.debug("Client connection received.")
         except socket.error as exc:
             logging.debug("Socket error %s", exc)
             # Return false to remove conn from GObject.io_add_watch list
