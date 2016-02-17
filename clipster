@@ -257,7 +257,7 @@ class Daemon(object):
             row_height = self.config.getint('clipster', 'row_height')
             trunc = ""
             lines = label.splitlines(True)
-            if len(lines) > row_height:
+            if len(lines) > row_height + 1:
                 trunc = "<b><i>({0} more lines)</i></b>".format(len(lines) - row_height)
             label = "{0}{1}".format(''.join(lines[:row_height]), trunc)
             # Add label and full text to model
