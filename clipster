@@ -725,8 +725,6 @@ def main():
 
     config = parse_config(args, data_dir)
 
-    client = Client(config, args)
-
     # Launch the daemon
     if args.daemon:
         try:
@@ -750,6 +748,8 @@ def main():
             logging.error("CLIPBOARD not in active_selections' in config.")
             return 1
         config.set('clipster', 'default_selection', 'CLIPBOARD')
+
+    client = Client(config, args)
 
     if args.output:
         if args.select:
