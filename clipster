@@ -699,12 +699,10 @@ def find_config():
 
     data_dir = os.path.join(xdg_data_home, "clipster")
     # Keep trying to define conf_file, moving from global -> local
-    conf_file = ""
     for path in xdg_config_dirs:
         if os.path.exists(os.path.join(path, 'clipster', "clipster.ini")):
-            conf_file = os.path.join(path, 'clipster', "clipster.ini")
-
-    return conf_file, data_dir
+            return os.path.join(path, 'clipster', "clipster.ini"), data_dir
+    return "", data_dir
 
 
 def main():
