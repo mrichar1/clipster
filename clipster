@@ -437,7 +437,7 @@ class Daemon(object):
             # once GdkSeat is in stable
             for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
                 if dev.get_source() == Gdk.InputSource.MOUSE:
-                    while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(mouse)[3]:
+                    while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(dev)[3]:
                         # Do nothing while mouse button is held down (selection drag)
                         pass
                 break
