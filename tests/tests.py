@@ -7,13 +7,34 @@ import logging
 import json
 from gi.repository import Gtk, Gdk
 
-# Uses a symlink - otherwise we're into imp/importlib py-ver hell
-import clipster
 try:
+    # py 3.x
     from unittest import mock
 except ImportError:
     # py 2.x
     import mock
+
+try:
+    # py 3.x
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("clipster", "../clipster")
+    clipster = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(clipster)
+except AttributeError:
+    # py 3.3 or 3.4
+    from importlib.machinery import SourceFileLoader
+    clipster = SourceFileLoader("clipster", "../clipster").load_module()
+except ImportError:
+    # py 2.x
+    import imp
+    clipster = imp.load_source('clipster', '../clipster')
+
+try:
+    # py 3.x
+    import builtins
+except ImportError:
+    # py 2.x
+    import __builtin__ as builtins
 
 
 class ClipsterTestCase(unittest.TestCase):
@@ -133,8 +154,9 @@ class DaemonTestCase(unittest.TestCase):
     def test_read_history_file(self):
         """Test that read_history_file correctly reads json from a file."""
 
+
         hist_file = self.config.get('clipster', 'history_file')
-        with mock.patch("builtins.open", mock.mock_open(read_data=json.dumps(self.history))) as mock_file:
+        with mock.patch.object(builtins, 'open', mock.mock_open(read_data=json.dumps(self.history))) as mock_file:
             self.daemon.read_history_file()
         self.assertEqual(self.daemon.boards, self.history)
 
