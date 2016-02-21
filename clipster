@@ -204,7 +204,7 @@ class Daemon(object):
             self.boards[board].remove(item)
             if self.config.getboolean('clipster', 'sync_selections'):
                 # find the 'other' board
-                board_list = self.boards.keys()
+                board_list = list(self.boards)
                 board_list.remove(board)
                 # Is the other board active? If so, delete item from its history too
                 if board_list[0] in self.config.get('clipster', 'active_selections'):
@@ -327,7 +327,7 @@ class Daemon(object):
         getattr(self, board.lower()).set_text(data, -1)
         if self.config.getboolean('clipster', 'sync_selections'):
             # Whichever board we just set, set the other one, if it's active
-            boards = self.boards.keys()
+            boards = list(self.boards)
             boards.remove(board)
             if boards[0] in self.config.get('clipster', 'active_selections'):
                 logging.debug("Syncing board %s to %s", board, boards[0])
