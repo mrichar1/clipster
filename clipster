@@ -5,14 +5,6 @@
 # pylint: disable=line-too-long
 
 from __future__ import print_function
-from gi import require_version
-require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk, GLib, GObject
-try:
-    require_version("Wnck", "3.0")
-    from gi.repository import Wnck
-except (ImportError, ValueError):
-    Wnck = None
 import signal
 import argparse
 import json
@@ -24,12 +16,65 @@ import logging
 import tempfile
 import re
 import stat
+from gi import require_version
+require_version("Gtk", "3.0")
+from gi.repository import Gtk, Gdk, GLib, GObject
+try:
+    require_version("Wnck", "3.0")
+    from gi.repository import Wnck
+except (ImportError, ValueError):
+    Wnck = None
 try:
     # py 3.x
     import configparser
 except ImportError:
     # py 2.x
     import ConfigParser as configparser
+    # Use this as a handy place to make some other compatibility hacks
+    # In python 2, ENOENT is sometimes IOError and sometimes OSError. Catch
+    # both by catching their immediate superclass exception EnvironmentError.
+    FileNotFoundError = EnvironmentError
+    FileExistsError = ProcessLookupError = OSError
+
+
+class suppress_if_errno:
+    """A context manager which suppresses exceptions with an errno attribute which matches the given value.
+
+    Allows things like:
+
+        try:
+            os.makedirs(dirs)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
+
+    to be expressed as:
+
+        with suppress_if_errno(OSError, errno.EEXIST):
+            os.makedirs(dir)
+
+    This is a fork of contextlib.suppress.
+
+    """
+
+    def __init__(self, exceptions, exc_val):
+        self._exceptions = exceptions
+        self._exc_val = exc_val
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exctype, excinst, exctb):
+        # Unlike isinstance and issubclass, CPython exception handling
+        # currently only looks at the concrete type hierarchy (ignoring
+        # the instance and subclass checking hooks). While Guido considers
+        # that a bug rather than a feature, it's a fairly hard one to fix
+        # due to various internal implementation details. suppress provides
+        # the simpler issubclass based semantics, rather than trying to
+        # exactly reproduce the limitations of the CPython interpreter.
+        #
+        # See http://bugs.python.org/issue12029 for more details
+        return exctype is not None and issubclass(exctype, self._exceptions) and excinst.errno == self._exc_val
 
 
 class ClipsterError(Exception):
@@ -62,7 +107,7 @@ class Client(object):
                                                 self.config.get('clipster',
                                                                 'default_selection')).encode('utf-8'))
 
-        if client_action is not "SELECT":
+        if client_action != "SELECT":
             # Send data read from stdin
             buf_size = 8192
             while True:
@@ -119,7 +164,7 @@ class Daemon(object):
     def __init__(self, config):
         """Set up clipboard objects and history dict."""
         self.config = config
-        self.patterns = None
+        self.patterns = []
         self.window = self.p_id = self.c_id = self.sock_s = None
         self.sock_file = self.config.get('clipster', 'socket_file')
         self.primary = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
@@ -212,7 +257,7 @@ class Daemon(object):
             row_height = self.config.getint('clipster', 'row_height')
             trunc = ""
             lines = label.splitlines(True)
-            if len(lines) > row_height:
+            if len(lines) > row_height + 1:
                 trunc = "<b><i>({0} more lines)</i></b>".format(len(lines) - row_height)
             label = "{0}{1}".format(''.join(lines[:row_height]), trunc)
             # Add label and full text to model
@@ -231,7 +276,7 @@ class Daemon(object):
         self.window.connect("key-press-event", self.keypress_handler, board, tree_select)
 
         # Handle window delete event
-        self.window.connect('delete_event', lambda x: self.window.hide())
+        self.window.connect('delete_event', self.window.hide)
 
         # Add a 'select' button
         select_btn = Gtk.Button.new_with_label("Select")
@@ -252,10 +297,10 @@ class Daemon(object):
         try:
             with open(self.hist_file, 'r') as hist_f:
                 self.boards.update(json.load(hist_f))
-        except IOError as exc:
-            if exc.errno == errno.ENOENT:
+        except FileNotFoundError as exc:
+            if exc.errno != errno.ENOENT:
                 # Not an error if there is no history file
-                pass
+                raise
 
     def write_history_file(self):
         """Write clipboard history to file."""
@@ -289,7 +334,7 @@ class Daemon(object):
                 getattr(self, boards[0].lower()).set_text(data, -1)
 
     def de_duplicate(self, board, text):
-        """If an text already exists in the clipboard, remove it."""
+        """If text already exists in the clipboard, remove it."""
 
         if not self.config.getboolean('clipster', 'duplicates'):
             if text in self.boards[board]:
@@ -320,16 +365,15 @@ class Daemon(object):
                 logging.debug("smart-update: removing.")
                 # new selection is a longer/shorter version of previous
                 self.boards[board].pop()
-        if self.patterns:
-            for pattern in self.patterns:
-                try:
-                    for match in set(re.findall(pattern, text)):
-                        if match != text:
-                            logging.debug("Pattern '%s' matched in: %s", pattern, text)
-                            self.de_duplicate(board, match)
-                            self.boards[board].append(match)
-                except re.error as exc:
-                    logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.message)
+        for pattern in self.patterns:
+            try:
+                for match in set(re.findall(pattern, text)):
+                    if match != text:
+                        logging.debug("Pattern '%s' matched in: %s", pattern, text)
+                        self.de_duplicate(board, match)
+                        self.boards[board].append(match)
+            except re.error as exc:
+                logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.message)
         if self.config.getboolean('clipster', 'extract_uris'):
             # Simple uri regex
             url_re = r'\b\S+://\S+\b'
@@ -384,25 +428,19 @@ class Daemon(object):
                     return True
 
             logging.debug("Selection in 'active_selections'")
-            if selection == "PRIMARY":
-                event_id = self.p_id
-            else:
-                event_id = self.c_id
+            event_id = selection == "PRIMARY" and self.p_id or self.c_id
             # Some apps update primary during mouse drag (chrome)
             # Block at start to prevent repeated triggering
             board.handler_block(event_id)
             # FIXME: this devs hack is a bit verbose. Look instead at
             # gdk_seat_get_pointer -> gdk_device_get_state
             # once GdkSeat is in stable
-            mouse = None
             for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
                 if dev.get_source() == Gdk.InputSource.MOUSE:
-                    mouse = dev
-                    break
-            if mouse:
-                while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(mouse)[3]:
-                    # Do nothing while mouse button is held down (selection drag)
-                    pass
+                    while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(dev)[3]:
+                        # Do nothing while mouse button is held down (selection drag)
+                        pass
+                break
 
             # Read clipboard
             try:
@@ -436,6 +474,7 @@ class Daemon(object):
         self.client_msgs[conn.fileno()] = []
         GObject.io_add_watch(conn, GObject.IO_IN,
                              self.socket_recv)
+        logging.debug("Client connection received.")
         return True
 
     def socket_recv(self, conn, _):
@@ -446,7 +485,6 @@ class Daemon(object):
             recv = conn.recv(8192)
             recv_total += len(recv)
             self.client_msgs[conn.fileno()].append(recv.decode('utf-8'))
-            logging.debug("Client connection received.")
         except socket.error as exc:
             logging.debug("Socket error %s", exc)
             # Return false to remove conn from GObject.io_add_watch list
@@ -489,33 +527,22 @@ class Daemon(object):
         by the daemon are available."""
 
         # Create the clipster dir if necessary
-        try:
+        with suppress_if_errno(FileExistsError, errno.EEXIST):
             os.makedirs(self.config.get('clipster', 'data_dir'))
-        except OSError as exc:
-            if exc.errno == errno.EEXIST:
-                # ok if directory already exists
-                pass
 
         # check for existing pid_file, and tidy up if appropriate
-        try:
+        with suppress_if_errno(FileNotFoundError, errno.ENOENT):
             with open(self.pid_file, 'r') as runf_r:
                 pid = int(runf_r.read())
                 try:
                     # Do nothing, but raise an error if no such process
                     os.kill(pid, 0)
                     raise ClipsterError("Daemon already running: pid {}".format(pid))
-                except OSError:
-                    try:
+                except ProcessLookupError as exc:
+                    if exc.errno != errno.ESRCH:
+                        raise
+                    with suppress_if_errno(FileNotFoundError, errno.ENOENT):
                         os.unlink(self.pid_file)
-                    except IOError as exc:
-                        if exc.errno == errno.ENOENT:
-                            # File already gone
-                            pass
-                        else:
-                            raise
-        except IOError as exc:
-            if exc.errno == errno.ENOENT:
-                pass
 
         # Create pid file
         with open(self.pid_file, 'w') as runf_w:
@@ -525,11 +552,8 @@ class Daemon(object):
         self.read_history_file()
 
         # Create the socket
-        try:
+        with suppress_if_errno(FileNotFoundError, errno.ENOENT):
             os.unlink(self.sock_file)
-        except OSError as exc:
-            if exc.errno == errno.ENOENT:
-                pass
 
         self.sock_s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock_s.bind(self.sock_file)
@@ -544,7 +568,7 @@ class Daemon(object):
                     self.patterns = [x.strip() for x in pat_f.read().splitlines()]
                     logging.debug("Loaded patterns: %s", ','.join(self.patterns))
 
-            except IOError as exc:
+            except FileNotFoundError as exc:
                 logging.warn("Unable to read patterns file: %s %s", patfile, exc.strerror)
 
     def exit(self):
@@ -553,16 +577,16 @@ class Daemon(object):
         logging.debug("Daemon exiting...")
         try:
             os.unlink(self.sock_file)
-        except OSError:
+        except FileNotFoundError as exc:
             logging.warning("Failed to remove socket file: %s", self.sock_file)
         try:
             os.unlink(self.pid_file)
-        except OSError:
-            logging.warning("Failed to remove run file: %s", self.pid_file)
+        except FileNotFoundError as exc:
+            logging.warning("Failed to remove pid file: %s", self.pid_file)
         try:
             self.write_history_file()
-        except OSError:
-            logging.warning("Failed to upodate history file: %s", self.hist_file)
+        except FileNotFoundError as exc:
+            logging.warning("Failed to update history file: %s", self.hist_file)
         Gtk.main_quit()
 
     def run(self):
@@ -600,11 +624,11 @@ class Daemon(object):
         Gtk.main()
 
 
-def parse_args():
+def parse_args(default_conf_file):
     """Parse command-line arguments."""
 
     parser = argparse.ArgumentParser(description='Clipster clipboard manager.')
-    parser.add_argument('-f', '--config', action="store",
+    parser.add_argument('-f', '--config', action="store", default=default_conf_file,
                         help="Path to config file.")
     parser.add_argument('-l', '--log_level', action="store", default="INFO",
                         help="Set log level: DEBUG, INFO (default), WARNING, ERROR, CRITICAL")
@@ -672,12 +696,10 @@ def find_config():
 
     data_dir = os.path.join(xdg_data_home, "clipster")
     # Keep trying to define conf_file, moving from global -> local
-    conf_file = ""
     for path in xdg_config_dirs:
         if os.path.exists(os.path.join(path, 'clipster', "clipster.ini")):
-            conf_file = os.path.join(path, 'clipster', "clipster.ini")
-
-    return conf_file, data_dir
+            return os.path.join(path, 'clipster', "clipster.ini"), data_dir
+    return "", data_dir
 
 
 def main():
@@ -687,11 +709,7 @@ def main():
     conf_file, data_dir = find_config()
 
     # parse command-line arguments
-    args = parse_args()
-
-    # Override default config file if provided
-    if not args.config:
-        args.config = conf_file
+    args = parse_args(default_conf_file=conf_file)
 
     # Enable logging
     logging.basicConfig(format='%(levelname)s:%(message)s',
@@ -699,8 +717,6 @@ def main():
     logging.debug("Debugging Enabled.")
 
     config = parse_config(args, data_dir)
-
-    client = Client(config, args)
 
     # Launch the daemon
     if args.daemon:
@@ -711,9 +727,7 @@ def main():
             logging.error(exc)
             return 1
 
-    client_action = "BOARD"
-    if args.select:
-        client_action = "SELECT"
+    client_action = args.select and "SELECT" or "BOARD"
 
     if args.primary:
         if 'PRIMARY' not in config.get('clipster', 'active_selections'):
@@ -725,6 +739,8 @@ def main():
             logging.error("CLIPBOARD not in active_selections' in config.")
             return 1
         config.set('clipster', 'default_selection', 'CLIPBOARD')
+
+    client = Client(config, args)
 
     if args.output:
         if args.select:
