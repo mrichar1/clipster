@@ -12,4 +12,9 @@ matrix:
     dist: trusty
     python: '3.4'
 script:
-- "./.travis/run.sh"
+  - "./.travis/run.sh"
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install -qq python3-gi gir1.2-ibus-1.0 gir1.2-wnck-3.0
+install:
+  -  pip install PyGObject
