@@ -1,0 +1,13 @@
+language: python
+cache:
+  directories:
+  - "$HOME/.cache/pip"
+  - "$HOME/.pyenv"
+matrix:
+  include:
+  - os: linux
+    dist: trusty
+    python: '2.7'
+  - os: linux
+    dist: trusty
+    python: '3.4'
