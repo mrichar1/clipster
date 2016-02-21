@@ -18,5 +18,3 @@ addons:
      - gir1.2-ibus-1.0
      - libwnck-3-0
      - gir1.2-wnck-3.0
-install:
-  -  pip install -U PyGObject
