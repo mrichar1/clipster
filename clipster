@@ -198,10 +198,10 @@ class Daemon(object):
             item = model[treeiter][1]
             logging.debug("Deleting history entry: %s", item)
             # If deleted item is currently on the clipboard, clear it
-            if getattr(self, board.lower()).wait_for_text() == item:
+            if self.read_board(board) == item:
                 self.update_board(board)
             # Remove item from history
-            self.boards[board].remove(item)
+            self.remove_history(board, item)
             if self.config.getboolean('clipster', 'sync_selections'):
                 # find the 'other' board
                 board_list = list(self.boards)
@@ -209,15 +209,13 @@ class Daemon(object):
                 # Is the other board active? If so, delete item from its history too
                 if board_list[0] in self.config.get('clipster', 'active_selections'):
                     logging.debug("Synchronising delete to other board.")
-                    # Remove item for history
-                    self.boards[board_list[0]].remove(item)
+                    # Remove item from history
+                    self.remove_history(board_list[0], item)
                     # If deleted item is current on the clipboard, clear it
-                    if getattr(self, board_list[0].lower()).wait_for_text() == item:
+                    if self.read_board(board) == item:
                         self.update_board(board)
             # Remove entry from UI
             model.remove(treeiter)
-            # Flag the history file for updating
-            self.update_history_file = True
 
     def activate_handler(self, event, board, tree_select):
         """Action selected history items."""
@@ -321,25 +319,24 @@ class Daemon(object):
         # Return true to make the timeout handler recur
         return True
 
+    def read_board(self, board):
+        """Return the text on the clipboard."""
+
+        return getattr(self, board.lower()).wait_for_text()
+
     def update_board(self, board, data=""):
-        """Update a clipboard."""
+        """Update a clipboard. Will trigger an owner-change event."""
 
         getattr(self, board.lower()).set_text(data, -1)
-        if self.config.getboolean('clipster', 'sync_selections'):
-            # Whichever board we just set, set the other one, if it's active
-            boards = list(self.boards)
-            boards.remove(board)
-            if boards[0] in self.config.get('clipster', 'active_selections'):
-                logging.debug("Syncing board %s to %s", board, boards[0])
-                getattr(self, boards[0].lower()).set_text(data, -1)
 
-    def de_duplicate(self, board, text):
-        """If text already exists in the clipboard, remove it."""
+    def remove_history(self, board, text):
+        """If text exists in the history, remove it."""
 
-        if not self.config.getboolean('clipster', 'duplicates'):
-            if text in self.boards[board]:
-                logging.debug("duplicate: removing.")
-                self.boards[board].remove(text)
+        if text in self.boards[board]:
+            logging.debug("Removing from history.")
+            self.boards[board].remove(text)
+            # Flag the history file for updating
+            self.update_history_file = True
 
     def update_history(self, board, text):
         """Update the in-memory clipboard history."""
@@ -352,7 +349,8 @@ class Daemon(object):
         except (UnicodeDecodeError, AttributeError):
             pass
 
-        self.de_duplicate(board, text)
+        if not self.config.getboolean('clipster', 'duplicates'):
+            self.remove_history(board, text)
         diff = self.config.getint('clipster', 'smart_update')
         try:
             last_item = self.boards[board][-1]
@@ -400,6 +398,15 @@ class Daemon(object):
         if self.config.getboolean('clipster', 'write_on_change'):
             self.write_history_file()
         logging.debug(self.boards[board])
+        if self.config.getboolean('clipster', 'sync_selections'):
+            # Whichever board we just set, set the other one, if it's active
+            boards = list(self.boards)
+            boards.remove(board)
+            if boards[0] in self.config.get('clipster', 'active_selections'):
+                # Stop if the board already contains the text.
+                if self.read_board(boards[0]) != text:
+                    logging.debug("Syncing board %s to %s", board, boards[0])
+                    self.update_board(boards[0], text)
 
     def owner_change(self, board, event):
         """Handler for owner-change clipboard events."""
@@ -454,7 +461,7 @@ class Daemon(object):
                     self.update_board(selection, self.boards[selection][-1])
             elif board.wait_is_text_available():
                 logging.debug("Selection is text.")
-                text = board.wait_for_text()
+                text = self.read_board(selection)
                 if text:
                     self.update_history(selection, text)
                 else:
