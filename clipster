@@ -500,7 +500,10 @@ class Daemon(object):
             conn.close()
             return False
         if not recv or recv_total > self.config.getint('clipster', 'max_input'):
-            self.process_msg(conn)
+            try:
+                self.process_msg(conn)
+            except ClipsterError as exc:
+                logging.error(exc)
             conn.close()
             # Return false to remove conn from GObject.io_add_watch list
             return False
@@ -515,7 +518,7 @@ class Daemon(object):
                 sig, board, count, content = msg_str.split(':', 3)
                 count = int(count)
             except ValueError:
-                logging.error("Invalid message received via socket - ignoring")
+                raise ClipsterError("Invalid message received via socket - ignoring")
             else:
                 logging.debug("Received: sig:%s, board:%s, count:%s", sig, board, count)
                 if sig == "SELECT":
@@ -529,7 +532,8 @@ class Daemon(object):
                                       self.boards[board][-count:])
                         # Send list (reversed) as json to preserve structure
                         conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
-            del self.client_msgs[conn.fileno()]
+            finally:
+                del self.client_msgs[conn.fileno()]
 
     def prepare_files(self):
         """Ensure that all files and sockets used
