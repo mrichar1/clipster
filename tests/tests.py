@@ -17,15 +17,19 @@ except ImportError:
     import mock
 
 try:
-    # py 3.x
+    # py >=3.5
     import importlib.util
     spec = importlib.util.spec_from_file_location("clipster", "../clipster")
     clipster = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(clipster)
 except AttributeError:
     # py 3.3 or 3.4
-    from importlib.machinery import SourceFileLoader
-    clipster = SourceFileLoader("clipster", "../clipster").load_module()
+    try:
+        from importlib.machinery import SourceFileLoader
+        clipster = SourceFileLoader("clipster", "../clipster").load_module()
+        except ImportError:
+            import imp
+            clipster = imp.load_source('clipster', '../clipster')
 except ImportError:
     # py 2.x
     import imp
