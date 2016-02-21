@@ -90,20 +90,20 @@ class Client(object):
     def __init__(self, config, args):
         self.config = config
         self.args = args
-        self.sock_c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 
     def client_update(self, client_action):
         """Send a signal and (optional) data from STDIN to daemon socket."""
 
         logging.debug("Connecting to server to update.")
         try:
-            self.sock_c.connect(self.config.get('clipster', "socket_file"))
+            self.sock.connect(self.config.get('clipster', "socket_file"))
         except socket.error:
             raise ClipsterError("Error connecting to socket. Is daemon running?")
         logging.debug("Sending request to server.")
         # Fix for http://bugs.python.org/issue1633941 in py 2.x
         # Send message 'header' - count is 0 (i.e to be ignored)
-        self.sock_c.sendall("{0}:{1}:0:".format(client_action,
+        self.sock.sendall("{0}:{1}:0:".format(client_action,
                                                 self.config.get('clipster',
                                                                 'default_selection')).encode('utf-8'))
 
@@ -117,36 +117,36 @@ class Client(object):
                     recv = sys.stdin.read(buf_size)
                 if not recv:
                     break
-                self.sock_c.sendall(recv.encode('utf-8'))
+                self.sock.sendall(recv.encode('utf-8'))
 
-        self.sock_c.close()
+        self.sock.close()
 
     def client_output(self, client_action, count):
 
         logging.debug("Connecting to server to query history.")
         try:
-            self.sock_c.connect(self.config.get('clipster', "socket_file"))
+            self.sock.connect(self.config.get('clipster', "socket_file"))
         except socket.error:
             raise ClipsterError("Error connecting to socket. Is daemon running?")
         logging.debug("Sending request to server.")
         # Send message 'header'
-        self.sock_c.sendall("{0}:{1}:{2}:".format(client_action,
+        self.sock.sendall("{0}:{1}:{2}:".format(client_action,
                                                   self.config.get('clipster',
                                                                   'default_selection'),
                                                   count).encode('utf-8'))
 
-        self.sock_c.shutdown(socket.SHUT_WR)
+        self.sock.shutdown(socket.SHUT_WR)
         data = []
         while True:
             try:
-                recv = self.sock_c.recv(8192)
+                recv = self.sock.recv(8192)
                 logging.debug("Received data from server.")
                 if not recv:
                     break
                 data.append(recv.decode('utf-8'))
             except socket.error:
                 break
-        self.sock_c.close()
+        self.sock.close()
         if data:
             # data is a list of 1 or more parts of a json string.
             # Reassemble this, then join with delimiter
@@ -165,7 +165,7 @@ class Daemon(object):
         """Set up clipboard objects and history dict."""
         self.config = config
         self.patterns = []
-        self.window = self.p_id = self.c_id = self.sock_s = None
+        self.window = self.p_id = self.c_id = self.sock = None
         self.sock_file = self.config.get('clipster', 'socket_file')
         self.primary = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
         self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
@@ -357,12 +357,13 @@ class Daemon(object):
         except IndexError:
             # List was empty
             last_item = ''
-        if text.startswith(last_item) or last_item.startswith(text):
-            # Make length difference a positive number before comparing
-            if abs(len(text) - len(last_item)) <= diff:
-                logging.debug("smart-update: removing.")
-                # new selection is a longer/shorter version of previous
-                self.boards[board].pop()
+        if last_item:
+            if text.startswith(last_item) or last_item.startswith(text):
+                # Make length difference a positive number before comparing
+                if abs(len(text) - len(last_item)) <= diff:
+                    logging.debug("smart-update: removing.")
+                    # new selection is a longer/shorter version of previous
+                    self.boards[board].pop()
         for pattern in self.patterns:
             try:
                 for match in set(re.findall(pattern, text)):
@@ -475,10 +476,10 @@ class Daemon(object):
             # Unblock event handling
             board.handler_unblock(event_id)
 
-    def socket_accept(self, sock_s, _):
+    def socket_accept(self, sock, _):
         """Accept a connection and 'select' it for readability."""
 
-        conn, _ = sock_s.accept()
+        conn, _ = sock.accept()
         self.client_msgs[conn.fileno()] = []
         GObject.io_add_watch(conn, GObject.IO_IN,
                              self.socket_recv)
@@ -563,10 +564,10 @@ class Daemon(object):
         with suppress_if_errno(FileNotFoundError, errno.ENOENT):
             os.unlink(self.sock_file)
 
-        self.sock_s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.sock_s.bind(self.sock_file)
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.bind(self.sock_file)
         os.chmod(self.sock_file, stat.S_IRUSR | stat.S_IWUSR)
-        self.sock_s.listen(5)
+        self.sock.listen(5)
 
         # Read in patterns file
         if self.config.getboolean('clipster', 'extract_patterns'):
@@ -615,7 +616,7 @@ class Daemon(object):
         self.c_id = self.clipboard.connect('owner-change',
                                            self.owner_change)
         # Handle socket connections
-        GObject.io_add_watch(self.sock_s, GObject.IO_IN,
+        GObject.io_add_watch(self.sock, GObject.IO_IN,
                              self.socket_accept)
         # Handle unix signals
         GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGINT, self.exit)
