@@ -454,8 +454,9 @@ class Daemon(object):
                 last_item = self.boards[selection][-1]
             except IndexError:
                 last_item = ""
-            if event.reason != Gdk.OwnerChange.NEW_OWNER:
-                # CLOSE or DESTROY event
+            # First item in tuple is bool, False if clipboard is empty
+            # Would use event.reason, but many apps don't set this properly.
+            if not board.wait_for_targets()[0]:
                 if last_item:
                     logging.debug("Clipboard cleared. Reinstating from history.")
                     self.update_board(selection, self.boards[selection][-1])
