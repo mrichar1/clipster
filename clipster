@@ -372,7 +372,8 @@ class Daemon(object):
                         self.remove_history(board, match)
                         self.boards[board].append(match)
             except re.error as exc:
-                logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.message)
+
+                logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.args[0])
         if self.config.getboolean('clipster', 'extract_uris'):
             # Simple uri regex
             url_re = r'\b\S+://\S+\b'
