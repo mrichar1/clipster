@@ -14,6 +14,10 @@ script:
 addons:
   apt:
     packages:
+     - pep8
+     - python3-pep8
+     - pylint
+     - pylint3
      - ibus
      - python-gi
      - python3-gi
