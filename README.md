@@ -44,7 +44,9 @@ New feature requests always welcome! See `Bugs & Improvements` at the end of thi
 
 ## Installation
 
-**Disclaimer:** At present Clipster is still under development. This means that, while the code should generally work as expected, features and design decisions are subject to change. Tagged releases will start to happen once the code-base has stabilised.
+[![Build Status](https://travis-ci.org/mrichar1/clipster.svg?branch=master)](https://travis-ci.org/mrichar1/clipster)
+
+**Disclaimer:** At present Clipster is still under development. This means that, while the code should generally work as expected, features and design decisions are subject to change. Tagged releases will start to happen once the code-base has stabilised. The Build Status indicator from travis CI shown above should give some indicator of the state of the master branch.
 
 You will need the python bindings for the gobject introspection libraries. These are provided by the `python-gi` package on debian-based systems, or by the `pygobject3` package on redhat-based systems.
 
