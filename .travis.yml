@@ -16,6 +16,10 @@ script:
 addons:
   apt:
     packages:
+     - pylint
+     - pylint3
+     - pep8
+     - python3-pep8
      - ibus
      - python-gi
      - python3-gi
@@ -27,6 +31,6 @@ addons:
      - libgtk-3-0
      - gir1.2-gtk-3.0
      - xvfb
+# Keep pip installing pep8 until pkg available
 before_install:
   - pip install pep8
-  - pip install pylint
