@@ -370,7 +370,8 @@ class Daemon(object):
                 for match in set(re.findall(pattern, text)):
                     if match != text:
                         logging.debug("Pattern '%s' matched in: %s", pattern, text)
-                        self.remove_history(board, match)
+                        if not self.config.getboolean('clipster', 'duplicates'):
+                            self.remove_history(board, match)
                         self.boards[board].append(match)
             except re.error as exc:
 
@@ -381,7 +382,8 @@ class Daemon(object):
             for url in set(re.findall(url_re, text)):
                 if url != text:
                     logging.debug("URL found: %s", url)
-                    self.remove_history(board, url)
+                    if not self.config.getboolean('clipster', 'duplicates'):
+                        self.remove_history(board, url)
                     self.boards[board].append(url)
         if self.config.getboolean('clipster', 'extract_emails'):
             # Simple email regex
@@ -392,7 +394,8 @@ class Daemon(object):
                 if ':' not in email:
                     if email != text:
                         logging.debug("Email found: %s", email)
-                        self.remove_history(board, email)
+                        if not self.config.getboolean('clipster', 'duplicates'):
+                            self.remove_history(board, email)
                         self.boards[board].append(email)
 
         self.boards[board].append(text)
