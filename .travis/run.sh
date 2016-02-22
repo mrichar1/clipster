@@ -13,8 +13,9 @@ set -x
   PYLINT=/usr/bin/pylint
 #fi
 
+# Commented out pep8 until above bug is fixed.
 # Ignore imports not at start and line-too-long)
-$PEP8 --ignore=E402,E501 clipster
+#$PEP8 --ignore=E402,E501 clipster
 $PYLINT --errors-only clipster
 
 python tests/tests.py
