@@ -14,10 +14,6 @@ script:
 addons:
   apt:
     packages:
-     - pep8
-     - python3-pep8
-     - pylint
-     - pylint3
      - ibus
      - python-gi
      - python3-gi
@@ -33,3 +29,5 @@ before_install:
   - "export DISPLAY=:99.0"
   - sh -e /etc/init.d/xvfb start
   - sleep 3
+  - pip install pep8
+  - pip install pylint
