@@ -1,17 +1,14 @@
 language: python
+os: linux
+dist: trusty
 cache:
   - apt
   - directories:
     - "$HOME/.cache/pip"
     - "$HOME/.pyenv"
-matrix:
-include:
-  - os: linux
-    dist: trusty
-    python: 2.7
-  - os: linux
-    dist: trusty
-    python: 3.2 # Pkgs >3.2 don't allow system_site_packages
+python:
+  - 2.7
+  - 3.2 # Pkgs >3.2 don't allow system_site_packages
 virtualenv:
   system_site_packages: true
 script:
