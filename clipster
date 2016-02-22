@@ -104,8 +104,8 @@ class Client(object):
         # Fix for http://bugs.python.org/issue1633941 in py 2.x
         # Send message 'header' - count is 0 (i.e to be ignored)
         self.sock.sendall("{0}:{1}:0:".format(client_action,
-                                                self.config.get('clipster',
-                                                                'default_selection')).encode('utf-8'))
+                                              self.config.get('clipster',
+                                                              'default_selection')).encode('utf-8'))
 
         if client_action != "SELECT":
             # Send data read from stdin
@@ -131,9 +131,9 @@ class Client(object):
         logging.debug("Sending request to server.")
         # Send message 'header'
         self.sock.sendall("{0}:{1}:{2}:".format(client_action,
-                                                  self.config.get('clipster',
-                                                                  'default_selection'),
-                                                  count).encode('utf-8'))
+                                                self.config.get('clipster',
+                                                                'default_selection'),
+                                                count).encode('utf-8'))
 
         self.sock.shutdown(socket.SHUT_WR)
         data = []
@@ -677,7 +677,7 @@ def parse_config(args, data_dir):
                        "history_update_interval": "60",  # Flush history to disk every N seconds, if changed (0 disables timeout)
                        "write_on_change": "no",  # Always write history file immediately (overrides history_update_interval)
                        "socket_file": "%(data_dir)s/clipster_sock",
-                       "pid_file":  "%(data_dir)s/clipster.pid",
+                       "pid_file": "%(data_dir)s/clipster.pid",
                        "max_input": "50000",  # max length of selection input
                        "row_height": "3",  # num rows to show in widget
                        "duplicates": "no",  # allow duplicates, or instead move the original entry to top
