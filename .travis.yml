@@ -8,6 +8,7 @@ cache:
     - "$HOME/.pyenv"
 python:
   - 2.7
+  - 3.3
   - 3.4
 virtualenv:
   system_site_packages: true
@@ -16,10 +17,6 @@ script:
 addons:
   apt:
     packages:
-     - pylint
-     - pylint3
-     - pep8
-     - python3-pep8
      - ibus
      - python-gi
      - python3-gi
@@ -32,5 +29,6 @@ addons:
      - gir1.2-gtk-3.0
      - xvfb
 # Keep pip installing pep8 until pkg available
-before_install:
+install:
   - pip install pep8
+  - pip install pylint
