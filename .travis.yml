@@ -8,7 +8,6 @@ cache:
     - "$HOME/.pyenv"
 python:
   - 2.7
-  - 3.3
   - 3.4
 virtualenv:
   system_site_packages: true
@@ -28,7 +27,6 @@ addons:
      - libgtk-3-0
      - gir1.2-gtk-3.0
      - xvfb
-# Keep pip installing pep8 until pkg available
 install:
   - pip install pep8
   - pip install pylint
