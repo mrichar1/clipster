@@ -6,7 +6,7 @@ set -x
 if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then
   PEP8="python3 /usr/lib/python3/dist-packages/pep8.py"
   PYLINT=/usr/bin/pylint3
-else:
+else
   PEP8=/usr/bin/pep8
   PYLINT=/usr/bin/pylint
 fi
