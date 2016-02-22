@@ -285,8 +285,8 @@ class Daemon(object):
         button_box.pack_start(select_btn, True, False, 0)
 
         # GtkDialog comes with a vbox already active, so pack into this
-        self.window.vbox.pack_start(scrolled, True, True, 0)
-        self.window.vbox.pack_start(button_box, False, False, 0)
+        self.window.vbox.pack_start(scrolled, True, True, 0)  # pylint: disable=no-member
+        self.window.vbox.pack_start(button_box, False, False, 0)  # pylint: disable=no-member
         self.window.set_size_request(500, 500)
         self.window.show_all()
 
