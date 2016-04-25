@@ -110,7 +110,7 @@ sync_selections = no
 
 # full path to the clipster history file (JSON)
 # Maximum file size is: 'history_size * max_input * 2' (defaults: 10MB)
-history_file = %(clipster_dir)s/history
+history_file = %(data_dir)s/history
 
 # Number of items to save in the history file for each selection.
 history_size = 200
@@ -124,10 +124,10 @@ history_update_interval = 60
 write_on_change = no
 
 # Full path to the clipster socket file
-socket_file = %(clipster_dir)s/clipster_sock
+socket_file = %(data_dir)s/clipster_sock
 
 # Full path to the clipster pid file
-pid_file = %(clipster_dir)s/clipster.pid
+pid_file = %(data_dir)s/clipster.pid
 
 # Maximum length for new clipboard items
 max_input = 50000
