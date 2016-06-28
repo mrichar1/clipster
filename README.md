@@ -52,6 +52,7 @@ You will need the python bindings for the gobject introspection libraries. These
 
 To install Clipster, simply download the clipster script from this repository and save it somewhere in your path.
 
+There is an aur package available for Arch Linux users: [clipster-git](https://aur.archlinux.org/packages/clipster-git/).
 
 ## Configuration
 
