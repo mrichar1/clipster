@@ -769,7 +769,7 @@ def main():
         else:
             try:
                 # Ask server for clipboard history
-                print(client.client_output(client_action, args.number), end='')
+                print(client.client_output(client_action, args.number).encode('utf-8'), end='')
             except ClipsterError as exc:
                 logging.error(exc)
                 return 1
