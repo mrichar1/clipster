@@ -117,6 +117,8 @@ class Client(object):
                     recv = sys.stdin.read(buf_size)
                 if not recv:
                     break
+                if hasattr(recv, 'decode'):
+                    recv = recv.decode('utf-8')
                 self.sock.sendall(recv.encode('utf-8'))
 
         self.sock.close()
