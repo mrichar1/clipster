@@ -107,7 +107,7 @@ class Client(object):
                                               self.config.get('clipster',
                                                               'default_selection')).encode('utf-8'))
 
-        if client_action != "SELECT":
+        if client_action == "BOARD":
             # Send data read from stdin
             buf_size = 8192
             while True:
@@ -178,6 +178,8 @@ class Daemon(object):
         self.client_msgs = {}
         # Flag to indicate that the in-memory history should be flushed to disk
         self.update_history_file = False
+        # Flag whether next clipboard change should be ignored
+        self.ignore_next = {'PRIMARY': False, 'CLIPBOARD': False}
 
     def keypress_handler(self, widget, event, board, tree_select):
         """Handle selection_widget keypress events."""
@@ -343,6 +345,12 @@ class Daemon(object):
 
     def update_history(self, board, text):
         """Update the in-memory clipboard history."""
+
+        if self.ignore_next[board]:
+            # Ignore history update this time and reset ignore flag
+            logging.debug("Ignoring update of %s history", board)
+            self.ignore_next[board] = False
+            return
 
         logging.debug("Updating clipboard: %s", board)
 
@@ -539,6 +547,8 @@ class Daemon(object):
                                       self.boards[board][-count:])
                         # Send list (reversed) as json to preserve structure
                         conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
+                elif sig == "IGNORE":
+                    self.ignore_next[board] = True
             finally:
                 del self.client_msgs[conn.fileno()]
 
@@ -666,6 +676,8 @@ def parse_args(default_conf_file):
                         help="Number of lines to output: defaults to 1 (See -o).")
     parser.add_argument('-0', '--nul', action="store_true",
                         help="Use NUL character as output delimiter.")
+    parser.add_argument('-i', '--ignore', action="store_true",
+                        help="Instruct daemon to ignore next update to clipboard.")
 
     return parser.parse_args()
 
@@ -749,7 +761,8 @@ def main():
             logging.error(exc)
             return 1
 
-    client_action = args.select and "SELECT" or "BOARD"
+    client_action = args.select and "SELECT" or (args.ignore and "IGNORE" or "BOARD")
+    logging.debug("client_action: %s" % client_action)
 
     if args.primary:
         if 'PRIMARY' not in config.get('clipster', 'active_selections'):
@@ -765,8 +778,8 @@ def main():
     client = Client(config, args)
 
     if args.output:
-        if args.select:
-            logging.error("Can't use --select and --output together.")
+        if args.select | args.ignore:
+            logging.error("Can't use --select and --output or --ignore together.")
             return 1
         else:
             try:
