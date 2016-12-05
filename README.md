@@ -37,6 +37,8 @@ Clipster was designed to try to add a good selection of useful features, while a
 
 * Ability to delete items in clipboard history.
 
+* One-off command to ignore next clipboard selection.
+
 
 New feature requests always welcome! See `Bugs & Improvements` at the end of this document.
 
@@ -60,7 +62,8 @@ There is an aur package available for Arch Linux users: [clipster-git](https://a
 
 ```
 ~$ clipster -h
-usage: clipster [-h] [-f CONFIG] [-p] [-c] [-d] [-s]
+usage: clipster [-h] [-f CONFIG] [-l LOG_LEVEL] [-p] [-c] [-d] [-s] [-o]
+                [-n NUMBER] [-0] [-i]
 
 Clipster clipboard manager.
 
@@ -75,11 +78,11 @@ optional arguments:
   -c, --clipboard       Query, or write STDIN to, the CLIPBOARD clipboard.
   -d, --daemon          Launch the daemon.
   -s, --select          Launch the clipboard history selection window.
-  -o, --output          Output N lines of history (See -n).
+  -o, --output          Output last selection from history. (See -n).
   -n NUMBER, --number NUMBER
                         Number of lines to output: defaults to 1 (See -o).
   -0, --nul             Use NUL character as output delimiter.
-
+  -i, --ignore          Instruct daemon to ignore next update to clipboard.
 ```
 
 
