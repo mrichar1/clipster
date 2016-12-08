@@ -213,6 +213,22 @@ class DaemonTestCase(unittest.TestCase):
         self.daemon.boards = self.history
         self.daemon.remove_history(board, 'apple')
         self.assertFalse('apple' in self.daemon.boards[board])
+    def test_duplicates_no(self):
+        """Test not allowing duplicates in history."""
+        self.config.set('clipster', 'duplicates', 'no')
+        board = 'PRIMARY'
+        self.daemon.update_history(board, 'copy')
+        self.daemon.update_history(board, 'copy')
+        self.assertTrue(len(self.daemon.boards[board]) == 1)
+
+    def test_duplicates_yes(self):
+        """Test allowing duplicates in history."""
+        self.config.set('clipster', 'smart_update', '1000')
+        self.config.set('clipster', 'duplicates', 'yes')
+        board = 'PRIMARY'
+        self.daemon.update_history(board, 'copy')
+        self.daemon.update_history(board, 'copy')
+        self.assertTrue(len(self.daemon.boards[board]) > 1)
 
     def test_smart_update(self):
         """Test that smart update works from left to right."""
