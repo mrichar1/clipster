@@ -212,6 +212,42 @@ class DaemonTestCase(unittest.TestCase):
         self.daemon.remove_history(board, 'apple')
         self.assertFalse('apple' in self.daemon.boards[board])
 
+    def test_smart_update(self):
+        """Test that smart update works from left to right."""
+        self.config.set('clipster', 'smart_update', '1')
+        board = 'PRIMARY'
+        # Select 'forwards'
+        self.daemon.update_history(board, 'ye')
+        self.daemon.update_history(board, 'yes')
+        self.assertTrue(len(self.daemon.boards[board]) == 1)
+
+    def test_smart_update_disable(self):
+        """Test that smart update is disabled by setting to 0."""
+        self.config.set('clipster', 'smart_update', '0')
+        board = 'PRIMARY'
+        # Select 'forwards'
+        self.daemon.update_history(board, 'ye')
+        self.daemon.update_history(board, 'yes')
+        self.assertTrue(len(self.daemon.boards[board]) > 1)
+
+    def test_smart_update_backwards(self):
+        """Test that smart_update works when selecting from right to left."""
+        self.config.set('clipster', 'smart_update', '1')
+        board = 'PRIMARY'
+        # Select 'backwards'
+        self.daemon.update_history(board, 'o')
+        self.daemon.update_history(board, 'no')
+        self.assertTrue(len(self.daemon.boards[board]) == 1)
+
+    def test_smart_update_limit(self):
+        """Test that selection 'extends' greater than smart_update limit are ignored."""
+        self.config.set('clipster', 'smart_update', '1')
+        board = 'PRIMARY'
+        # Extend selection by several chars
+        self.daemon.update_history(board, 'short')
+        self.daemon.update_history(board, 'shortening')
+        self.assertTrue(len(self.daemon.boards[board]) > 1)
+
     def test_process_msg_invalid(self):
         """Process an invalid client message."""
 

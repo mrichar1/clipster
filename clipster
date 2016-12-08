@@ -369,7 +369,8 @@ class Daemon(object):
             # List was empty
             last_item = ''
         if last_item:
-            if text.startswith(last_item) or last_item.startswith(text):
+            # Check for growing or shrinking, but ignore duplicates
+            if text != last_item and (text in last_item or last_item in text):
                 # Make length difference a positive number before comparing
                 if abs(len(text) - len(last_item)) <= diff:
                     logging.debug("smart-update: removing.")
