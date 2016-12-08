@@ -137,18 +137,20 @@ class DaemonTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Read in the config and args defaults
-        cls.args = clipster.parse_args(None)
-        # 2nd argument is the data dir - usually derived from XDG/ENV
-        # Set to an explicit value for testing
-        cls.data_dir = "/data_dir"
-        cls.config = clipster.parse_config(cls.args, cls.data_dir)
+        pass
 
     @classmethod
     def tearDownClass(cls):
         pass
 
     def setUp(self):
+        # Read in the config and args defaults
+        self.args = clipster.parse_args(None)
+        # 2nd argument is the data dir - usually derived from XDG/ENV
+        # Set to an explicit value for testing
+        self.data_dir = "/data_dir"
+        self.config = clipster.parse_config(self.args, self.data_dir)
+
         # Set up a fake history
         self.history = {"CLIPBOARD": ["ape", "bear\nbear", "cat\ncat\n"], "PRIMARY": ["apple", "banana\nbanana", "clementine\nclementine\n"]}
         self.daemon = clipster.Daemon(self.config)
