@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# vim: set fileencoding=utf-8 :
 
 import unittest
 import os
@@ -265,6 +266,16 @@ class DaemonTestCase(unittest.TestCase):
         self.daemon.update_history(board, 'short')
         self.daemon.update_history(board, 'shortening')
         self.assertTrue(len(self.daemon.boards[board]) > 1)
+
+    def test_sync_selections(self):
+        """Test that sync_selections syncs between boards."""
+        self.config.set('clipster', 'sync_selections', 'yes')
+        print(self.daemon.boards)
+        text = '100°C'
+        self.daemon.update_history('PRIMARY', text)
+        print(self.daemon.boards)
+        clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        self.assertEqual(text, clipboard.wait_for_text())
 
     def test_process_msg_invalid(self):
         """Process an invalid client message."""
