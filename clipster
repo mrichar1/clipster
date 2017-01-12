@@ -327,7 +327,13 @@ class Daemon(object):
     def read_board(self, board):
         """Return the text on the clipboard."""
 
-        return getattr(self, board.lower()).wait_for_text()
+        text = getattr(self, board.lower()).wait_for_text()
+        try:
+            # Needed for unicode comparisons - see issue #1
+            text = text.decode('utf-8')
+        except (UnicodeDecodeError, UnicodeEncodeError, AttributeError):
+            pass
+        return text
 
     def update_board(self, board, data=""):
         """Update a clipboard. Will trigger an owner-change event."""
@@ -357,7 +363,7 @@ class Daemon(object):
         try:
             # Needed for unicode comparisons - see issue #1
             text = text.decode('utf-8')
-        except (UnicodeDecodeError, AttributeError):
+        except (UnicodeDecodeError, UnicodeEncodeError, AttributeError):
             pass
 
         if not self.config.getboolean('clipster', 'duplicates'):
