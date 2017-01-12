@@ -80,6 +80,8 @@ class ClientTestCase(unittest.TestCase):
         # Set to an explicit value for testing
         cls.data_dir = "/data_dir"
         cls.config = clipster.parse_config(cls.args, cls.data_dir)
+        cls.logger = logging.getLogger()
+#        logger.level = logging.DEBUG
 
     @classmethod
     def tearDownClass(cls):
@@ -138,7 +140,8 @@ class DaemonTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        pass
+        cls.logger = logging.getLogger()
+#        cls.logger.level = logging.DEBUG
 
     @classmethod
     def tearDownClass(cls):
@@ -214,6 +217,7 @@ class DaemonTestCase(unittest.TestCase):
         self.daemon.boards = self.history
         self.daemon.remove_history(board, 'apple')
         self.assertFalse('apple' in self.daemon.boards[board])
+
     def test_duplicates_no(self):
         """Test not allowing duplicates in history."""
         self.config.set('clipster', 'duplicates', 'no')
