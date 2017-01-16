@@ -540,7 +540,7 @@ class Daemon(object):
                 sig, board, count, content = msg_str.split(':', 3)
                 count = int(count)
             except ValueError:
-                raise ClipsterError("Invalid message received via socket - ignoring")
+                logging.error("Invalid message received via socket: %s", msg_str)
             else:
                 logging.debug("Received: sig:%s, board:%s, count:%s", sig, board, count)
                 if sig == "SELECT":
