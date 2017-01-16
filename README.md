@@ -50,7 +50,7 @@ New feature requests always welcome! See `Bugs & Improvements` at the end of thi
 
 **Disclaimer:** At present Clipster is still under development. This means that, while the code should generally work as expected, features and design decisions are subject to change. Tagged releases will start to happen once the code-base has stabilised. The Build Status indicator from travis CI shown above should give some indicator of the state of the master branch.
 
-You will need the python bindings for the gobject introspection libraries. These are provided by the `python-gi` package on debian-based systems, or by the `pygobject3` package on redhat-based systems.
+You will need to install the python bindings for the gobject introspection libraries. These are provided by the `python-gi` and `gir1.2-gtk-3.0` packages on debian-based systems, or by the `pygobject3` package on redhat-based systems.
 
 To install Clipster, simply download the clipster script from this repository and save it somewhere in your path.
 
