@@ -16,6 +16,7 @@ import logging
 import tempfile
 import re
 import stat
+from contextlib import closing
 from gi import require_version
 require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GLib, GObject
@@ -90,66 +91,64 @@ class Client(object):
     def __init__(self, config, args):
         self.config = config
         self.args = args
-        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 
-    def client_update(self, client_action):
+    def update(self, client_action):
         """Send a signal and (optional) data from STDIN to daemon socket."""
 
         logging.debug("Connecting to server to update.")
-        try:
-            self.sock.connect(self.config.get('clipster', "socket_file"))
-        except socket.error:
-            raise ClipsterError("Error connecting to socket. Is daemon running?")
-        logging.debug("Sending request to server.")
-        # Fix for http://bugs.python.org/issue1633941 in py 2.x
-        # Send message 'header' - count is 0 (i.e to be ignored)
-        self.sock.sendall("{0}:{1}:0:".format(client_action,
-                                              self.config.get('clipster',
-                                                              'default_selection')).encode('utf-8'))
+        with closing(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)) as sock:
+            try:
+                sock.connect(self.config.get('clipster', "socket_file"))
+            except socket.error:
+                raise ClipsterError("Error connecting to socket. Is daemon running?")
+            logging.debug("Sending request to server.")
+            # Fix for http://bugs.python.org/issue1633941 in py 2.x
+            # Send message 'header' - count is 0 (i.e to be ignored)
+            sock.sendall("{0}:{1}:0:".format(client_action,
+                                             self.config.get('clipster',
+                                                             'default_selection')).encode('utf-8'))
 
-        if client_action == "BOARD":
-            # Send data read from stdin
-            buf_size = 8192
-            while True:
-                if sys.stdin.isatty():
-                    recv = sys.stdin.readline(buf_size)
-                else:
-                    recv = sys.stdin.read(buf_size)
-                if not recv:
-                    break
-                if hasattr(recv, 'decode'):
-                    recv = recv.decode('utf-8')
-                self.sock.sendall(recv.encode('utf-8'))
+            if client_action == "BOARD":
+                # Send data read from stdin
+                buf_size = 8192
+                while True:
+                    if sys.stdin.isatty():
+                        recv = sys.stdin.readline(buf_size)
+                    else:
+                        recv = sys.stdin.read(buf_size)
+                    if not recv:
+                        break
+                    if hasattr(recv, 'decode'):
+                        recv = recv.decode('utf-8')
+                    sock.sendall(recv.encode('utf-8'))
 
-        self.sock.close()
-
-    def client_output(self, client_action, count):
+    def output(self, client_action, count):
         """Send a signal and count to daemon socket requesting items from history."""
 
         logging.debug("Connecting to server to query history.")
-        try:
-            self.sock.connect(self.config.get('clipster', "socket_file"))
-        except socket.error:
-            raise ClipsterError("Error connecting to socket. Is daemon running?")
-        logging.debug("Sending request to server.")
-        # Send message 'header'
-        self.sock.sendall("{0}:{1}:{2}:".format(client_action,
-                                                self.config.get('clipster',
-                                                                'default_selection'),
-                                                count).encode('utf-8'))
-
-        self.sock.shutdown(socket.SHUT_WR)
-        data = []
-        while True:
+        with closing(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)) as sock:
             try:
-                recv = self.sock.recv(8192)
-                logging.debug("Received data from server.")
-                if not recv:
-                    break
-                data.append(recv.decode('utf-8'))
+                sock.connect(self.config.get('clipster', "socket_file"))
             except socket.error:
-                break
-        self.sock.close()
+                raise ClipsterError("Error connecting to socket. Is daemon running?")
+            logging.debug("Sending request to server.")
+            # Send message 'header'
+            sock.sendall("{0}:{1}:{2}:".format(client_action,
+                                               self.config.get('clipster',
+                                                               'default_selection'),
+                                               count).encode('utf-8'))
+
+            sock.shutdown(socket.SHUT_WR)
+            data = []
+            while True:
+                try:
+                    recv = sock.recv(8192)
+                    logging.debug("Received data from server.")
+                    if not recv:
+                        break
+                    data.append(recv.decode('utf-8'))
+                except socket.error:
+                    break
         if data:
             # data is a list of 1 or more parts of a json string.
             # Reassemble this, then join with delimiter
@@ -789,14 +788,14 @@ def main():
         else:
             try:
                 # Ask server for clipboard history
-                print(client.client_output(client_action, args.number), end='')
+                print(client.output(client_action, args.number), end='')
             except ClipsterError as exc:
                 logging.error(exc)
                 return 1
     else:
         try:
             # Read from stdin and send to server
-            client.client_update(client_action)
+            client.update(client_action)
         except ClipsterError as exc:
             logging.error(exc)
             return 1
