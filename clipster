@@ -37,7 +37,7 @@ except ImportError:
     FileExistsError = ProcessLookupError = OSError  # pylint: disable=redefined-builtin
 
 
-class suppress_if_errno:
+class suppress_if_errno(object):
     """A context manager which suppresses exceptions with an errno attribute which matches the given value.
 
     Allows things like:
@@ -769,7 +769,7 @@ def main():
             return 1
 
     client_action = args.select and "SELECT" or (args.ignore and "IGNORE" or "BOARD")
-    logging.debug("client_action: %s" % client_action)
+    logging.debug("client_action: %s", client_action)
 
     if args.primary:
         if 'PRIMARY' not in config.get('clipster', 'active_selections'):
