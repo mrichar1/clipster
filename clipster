@@ -124,7 +124,7 @@ class Client(object):
                         recv = recv.decode('utf-8')
                     sock.sendall(recv.encode('utf-8'))
 
-    def output(self, count):
+    def output(self):
         """Send a signal and count to daemon socket requesting items from history."""
 
         logging.debug("Connecting to server to query history.")
@@ -138,7 +138,7 @@ class Client(object):
             sock.sendall("{0}:{1}:{2}:".format(self.client_action,
                                                self.config.get('clipster',
                                                                'default_selection'),
-                                               count).encode('utf-8'))
+                                               self.args.number).encode('utf-8'))
 
             sock.shutdown(socket.SHUT_WR)
             data = []
@@ -784,7 +784,7 @@ def main():
         else:
             try:
                 # Ask server for clipboard history
-                print(client.output(args.number), end='')
+                print(client.output(), end='')
             except ClipsterError as exc:
                 logging.error(exc)
                 return 1
