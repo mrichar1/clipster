@@ -279,16 +279,16 @@ class DaemonTestCase(unittest.TestCase):
         clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
         self.assertEqual(text, clipboard.wait_for_text())
 
-    def test_process_msg_invalid(self):
+    @mock.patch('clipster.logging.error')
+    def test_process_msg_invalid(self, mock_logging):
         """Process an invalid client message."""
 
         # Set up a mock of some of a socket connection object
         conn = mock.MagicMock()
         conn.fileno.return_value = 1
-
         self.daemon.client_msgs = {1: "INVALID MESSAGE"}
-        with self.assertRaises(clipster.ClipsterError):
-            self.daemon.process_msg(conn)
+        self.daemon.process_msg(conn)
+        mock_logging.assert_called_with('Invalid message received via socket: %s', 'INVALID MESSAGE')
 
     @mock.patch('clipster.Daemon.update_board')
     def test_process_msg_update(self, mock_update_board):
