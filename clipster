@@ -166,6 +166,7 @@ class Daemon(object):
 
     def __init__(self, config):
         """Set up clipboard objects and history dict."""
+
         self.config = config
         self.patterns = []
         self.window = self.p_id = self.c_id = self.sock = None
@@ -297,6 +298,7 @@ class Daemon(object):
 
     def read_history_file(self):
         """Read clipboard history from file."""
+
         try:
             with open(self.hist_file, 'r') as hist_f:
                 self.boards.update(json.load(hist_f))
@@ -391,8 +393,8 @@ class Daemon(object):
                             self.remove_history(board, match)
                         self.boards[board].append(match)
             except re.error as exc:
-
                 logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.args[0])
+
         if self.config.getboolean('clipster', 'extract_uris'):
             # Simple uri regex
             url_re = r'\b\S+://\S+\b'
@@ -408,12 +410,11 @@ class Daemon(object):
             for email in set(re.findall(mail_re, text)):
                 # Skip urls with auth info that look a bit like emails
                 # e.g. http://bob:passwd@example.com
-                if ':' not in email:
-                    if email != text:
-                        logging.debug("Email found: %s", email)
-                        if not self.config.getboolean('clipster', 'duplicates'):
-                            self.remove_history(board, email)
-                        self.boards[board].append(email)
+                if ':' not in email and email != text:
+                    logging.debug("Email found: %s", email)
+                    if not self.config.getboolean('clipster', 'duplicates'):
+                        self.remove_history(board, email)
+                    self.boards[board].append(email)
 
         self.boards[board].append(text)
         # Flag that the history file needs updating
@@ -795,7 +796,6 @@ def main():
             except ClipsterError as exc:
                 logging.error(exc)
                 return 1
-
     else:
         try:
             # Read from stdin and send to server
