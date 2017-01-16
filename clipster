@@ -523,10 +523,7 @@ class Daemon(object):
             conn.close()
             return False
         if not recv or recv_total > self.config.getint('clipster', 'max_input'):
-            try:
-                self.process_msg(conn)
-            except ClipsterError as exc:
-                logging.error(exc)
+            self.process_msg(conn)
             conn.close()
             # Return false to remove conn from GObject.io_add_watch list
             return False
