@@ -532,30 +532,30 @@ class Daemon(object):
     def process_msg(self, conn):
         """Process message received from client, sending reply if required."""
 
-        if self.client_msgs[conn.fileno()]:
-            msg_str = ''.join(self.client_msgs[conn.fileno()])
-            try:
-                sig, board, count, content = msg_str.split(':', 3)
-                count = int(count)
-            except ValueError:
-                logging.error("Invalid message received via socket: %s", msg_str)
-            else:
-                logging.debug("Received: sig:%s, board:%s, count:%s", sig, board, count)
-                if sig == "SELECT":
-                    self.selection_widget(board)
-                elif sig == "BOARD":
-                    if content:
-                        logging.debug("Received content: %s", content)
-                        self.update_board(board, content)
-                    elif count:
-                        logging.debug("Sending requested selection(s): %s",
-                                      self.boards[board][-count:])
-                        # Send list (reversed) as json to preserve structure
-                        conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
-                elif sig == "IGNORE":
-                    self.ignore_next[board] = True
-            finally:
-                del self.client_msgs[conn.fileno()]
+        try:
+            msg_str = ''.join(self.client_msgs.pop(conn.fileno()))
+        except KeyError:
+            return
+        try:
+            sig, board, count, content = msg_str.split(':', 3)
+            count = int(count)
+        except ValueError:
+            logging.error("Invalid message received via socket: %s", msg_str)
+            return
+        logging.debug("Received: sig:%s, board:%s, count:%s", sig, board, count)
+        if sig == "SELECT":
+            self.selection_widget(board)
+        elif sig == "BOARD":
+            if content:
+                logging.debug("Received content: %s", content)
+                self.update_board(board, content)
+            elif count:
+                logging.debug("Sending requested selection(s): %s",
+                              self.boards[board][-count:])
+                # Send list (reversed) as json to preserve structure
+                conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
+        elif sig == "IGNORE":
+            self.ignore_next[board] = True
 
     def prepare_files(self):
         """Ensure that all files and sockets used
