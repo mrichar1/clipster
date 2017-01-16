@@ -243,8 +243,7 @@ class Daemon(object):
 
         # Create windows & widgets
         # Gtk complains about dialogs with no parents, so create one
-        rootwin = Gtk.Window()
-        self.window = Gtk.Dialog(title="Clipster", parent=rootwin)
+        self.window = Gtk.Dialog(title="Clipster", parent=Gtk.Window())
         scrolled = Gtk.ScrolledWindow()
         model = Gtk.ListStore(str, str)
         tree = Gtk.TreeView(model)
