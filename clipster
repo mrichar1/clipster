@@ -91,8 +91,10 @@ class Client(object):
     def __init__(self, config, args):
         self.config = config
         self.args = args
+        self.client_action = args.select and "SELECT" or (args.ignore and "IGNORE" or "BOARD")
+        logging.debug("client_action: %s", self.client_action)
 
-    def update(self, client_action):
+    def update(self):
         """Send a signal and (optional) data from STDIN to daemon socket."""
 
         logging.debug("Connecting to server to update.")
@@ -104,11 +106,11 @@ class Client(object):
             logging.debug("Sending request to server.")
             # Fix for http://bugs.python.org/issue1633941 in py 2.x
             # Send message 'header' - count is 0 (i.e to be ignored)
-            sock.sendall("{0}:{1}:0:".format(client_action,
+            sock.sendall("{0}:{1}:0:".format(self.client_action,
                                              self.config.get('clipster',
                                                              'default_selection')).encode('utf-8'))
 
-            if client_action == "BOARD":
+            if self.client_action == "BOARD":
                 # Send data read from stdin
                 buf_size = 8192
                 while True:
@@ -122,7 +124,7 @@ class Client(object):
                         recv = recv.decode('utf-8')
                     sock.sendall(recv.encode('utf-8'))
 
-    def output(self, client_action, count):
+    def output(self, count):
         """Send a signal and count to daemon socket requesting items from history."""
 
         logging.debug("Connecting to server to query history.")
@@ -133,7 +135,7 @@ class Client(object):
                 raise ClipsterError("Error connecting to socket. Is daemon running?")
             logging.debug("Sending request to server.")
             # Send message 'header'
-            sock.sendall("{0}:{1}:{2}:".format(client_action,
+            sock.sendall("{0}:{1}:{2}:".format(self.client_action,
                                                self.config.get('clipster',
                                                                'default_selection'),
                                                count).encode('utf-8'))
@@ -152,9 +154,7 @@ class Client(object):
         if data:
             # data is a list of 1 or more parts of a json string.
             # Reassemble this, then join with delimiter
-            delim = '\n'
-            if self.args.nul:
-                delim = '\x00'
+            delim = self.args.nul and '\0' or '\n'
             return delim.join(json.loads(''.join(data)))
 
 
@@ -765,9 +765,6 @@ def main():
             logging.error(exc)
             return 1
 
-    client_action = args.select and "SELECT" or (args.ignore and "IGNORE" or "BOARD")
-    logging.debug("client_action: %s", client_action)
-
     if args.primary:
         if 'PRIMARY' not in config.get('clipster', 'active_selections'):
             logging.error("PRIMARY not in 'active_selections' in config.")
@@ -788,14 +785,14 @@ def main():
         else:
             try:
                 # Ask server for clipboard history
-                print(client.output(client_action, args.number), end='')
+                print(client.output(args.number), end='')
             except ClipsterError as exc:
                 logging.error(exc)
                 return 1
     else:
         try:
             # Read from stdin and send to server
-            client.update(client_action)
+            client.update()
         except ClipsterError as exc:
             logging.error(exc)
             return 1
