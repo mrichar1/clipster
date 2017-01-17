@@ -364,14 +364,13 @@ class Daemon(object):
         except IndexError:
             # List was empty
             last_item = ''
-        if last_item:
-            # Check for growing or shrinking, but ignore duplicates
-            if text != last_item and (text in last_item or last_item in text):
-                # Make length difference a positive number before comparing
-                if abs(len(text) - len(last_item)) <= diff:
-                    logging.debug("smart-update: removing.")
-                    # new selection is a longer/shorter version of previous
-                    self.boards[board].pop()
+        # Check for growing or shrinking, but ignore duplicates
+        if last_item and text != last_item and (text in last_item or last_item in text):
+            # Make length difference a positive number before comparing
+            if abs(len(text) - len(last_item)) <= diff:
+                logging.debug("smart-update: removing.")
+                # new selection is a longer/shorter version of previous
+                self.boards[board].pop()
         for pattern in self.patterns:
             try:
                 for match in set(re.findall(pattern, text)):
@@ -414,11 +413,10 @@ class Daemon(object):
             # Whichever board we just set, set the other one, if it's active
             boards = list(self.boards)
             boards.remove(board)
-            if boards[0] in self.config.get('clipster', 'active_selections'):
-                # Stop if the board already contains the text.
-                if self.read_board(boards[0]) != text:
-                    logging.debug("Syncing board %s to %s", board, boards[0])
-                    self.update_board(boards[0], text)
+            # Stop if the board already contains the text.
+            if boards[0] in self.config.get('clipster', 'active_selections') and self.read_board(boards[0]) != text:
+                logging.debug("Syncing board %s to %s", board, boards[0])
+                self.update_board(boards[0], text)
 
     def owner_change(self, board, event):
         """Handler for owner-change clipboard events."""
@@ -478,10 +476,9 @@ class Daemon(object):
             text = self.read_board(selection)
             if text:
                 self.update_history(selection, text)
-            else:
-                if last_item:
-                    logging.debug("Selection empty. Reinstating from history.")
-                    self.update_board(selection, last_item)
+            elif last_item:
+                logging.debug("Selection empty. Reinstating from history.")
+                self.update_board(selection, last_item)
         else:
             logging.debug("Selection is not text - ignoring.")
 
