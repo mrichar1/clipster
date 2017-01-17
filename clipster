@@ -431,19 +431,18 @@ class Daemon(object):
         if selection in active:
             # Ignore owner-change events for apps with certain WM_CLASS values
             if self.config.get('clipster', 'filter_classes'):
-                classes = self.config.get('clipster', 'filter_classes').lower().split(',')
-                if Wnck:
-                    logging.debug("Filter classes enabled for: %s", classes)
-                    screen = Wnck.Screen.get_default()
-                    screen.force_update()
-                    active_window = screen.get_active_window()
-                    wm_class = active_window.get_class_group_name()
-                    logging.debug("Active window class is %s", wm_class)
-                    if wm_class.lower() in classes:
-                        logging.debug("Ignoring active window.")
-                        return True
-                else:
+                if not Wnck:
                     logging.error("'filter_classes' requires Wnck (libwnck3).")
+                    return True
+                classes = self.config.get('clipster', 'filter_classes').lower().split(',')
+                logging.debug("Filter classes enabled for: %s", classes)
+                screen = Wnck.Screen.get_default()
+                screen.force_update()
+                active_window = screen.get_active_window()
+                wm_class = active_window.get_class_group_name()
+                logging.debug("Active window class is %s", wm_class)
+                if wm_class.lower() in classes:
+                    logging.debug("Ignoring active window.")
                     return True
 
             logging.debug("Selection in 'active_selections'")
