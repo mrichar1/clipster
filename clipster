@@ -757,44 +757,36 @@ def main():
 
     # Launch the daemon
     if args.daemon:
-        try:
-            Daemon(config).run()
-            return 0
-        except ClipsterError as exc:
-            logging.error(exc)
-            return 1
+        Daemon(config).run()
+    else:
+        if args.primary:
+            if 'PRIMARY' not in config.get('clipster', 'active_selections'):
+                raise ClipsterError("PRIMARY not in 'active_selections' in config.")
+            config.set('clipster', 'default_selection', 'PRIMARY')
+        elif args.clipboard:
+            if 'CLIPBOARD' not in config.get('clipster', 'active_selections'):
+                raise ClipsterError("CLIPBOARD not in active_selections' in config.")
+            config.set('clipster', 'default_selection', 'CLIPBOARD')
 
-    if args.primary:
-        if 'PRIMARY' not in config.get('clipster', 'active_selections'):
-            logging.error("PRIMARY not in 'active_selections' in config.")
-            return 1
-        config.set('clipster', 'default_selection', 'PRIMARY')
-    elif args.clipboard:
-        if 'CLIPBOARD' not in config.get('clipster', 'active_selections'):
-            logging.error("CLIPBOARD not in active_selections' in config.")
-            return 1
-        config.set('clipster', 'default_selection', 'CLIPBOARD')
+        client = Client(config, args)
 
-    client = Client(config, args)
-
-    if args.output:
-        if args.select | args.ignore:
-            logging.error("Can't use --select and --output or --ignore together.")
-            return 1
-        else:
-            try:
+        if args.output:
+            if args.select | args.ignore:
+                raise ClipsterError("Can't use --select and --output or --ignore together.")
+            else:
                 # Ask server for clipboard history
                 print(client.output(), end='')
-            except ClipsterError as exc:
-                logging.error(exc)
-                return 1
-    else:
-        try:
+        else:
             # Read from stdin and send to server
             client.update()
-        except ClipsterError as exc:
-            logging.error(exc)
-            return 1
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        main()
+    except ClipsterError as exc:
+        if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
+            raise
+        else:
+            # Only output the 'human-readable' part.
+            logging.error(exc)
+            sys.exit(1)
