@@ -298,7 +298,7 @@ class Daemon(object):
         """Read clipboard history from file."""
 
         try:
-            with open(self.hist_file, 'r') as hist_f:
+            with open(self.hist_file) as hist_f:
                 self.boards.update(json.load(hist_f))
         except FileNotFoundError as exc:
             if exc.errno != errno.ENOENT:
@@ -557,7 +557,7 @@ class Daemon(object):
 
         # check for existing pid_file, and tidy up if appropriate
         with suppress_if_errno(FileNotFoundError, errno.ENOENT):
-            with open(self.pid_file, 'r') as runf_r:
+            with open(self.pid_file) as runf_r:
                 pid = int(runf_r.read())
                 try:
                     # Do nothing, but raise an error if no such process
@@ -589,7 +589,7 @@ class Daemon(object):
         if self.config.getboolean('clipster', 'extract_patterns'):
             try:
                 patfile = os.path.join(self.config.get('clipster', 'data_dir'), 'patterns')
-                with open(patfile, 'r') as pat_f:
+                with open(patfile) as pat_f:
                     self.patterns = [x.strip() for x in pat_f.read().splitlines()]
                     logging.debug("Loaded patterns: %s", ','.join(self.patterns))
 
