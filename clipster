@@ -505,7 +505,7 @@ class Daemon(object):
         try:
             recv = safe_decode(conn.recv(min(8192, max_input - recv_total)))
             self.client_msgs[conn.fileno()].append(recv)
-            recv_total = sum(len(x) for x in self.client_msgs[conn.fileno()])
+            recv_total += len(recv)
         except socket.error as exc:
             logging.debug("Socket error %s", exc)
             conn.close()
