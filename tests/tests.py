@@ -105,11 +105,13 @@ class ClientTestCase(unittest.TestCase):
         board = self.config.get('clipster', 'default_selection')
         socket_file = self.config.get('clipster', 'socket_file')
         client_action = "SELECT"
+        self.args.select = True
         self.client = clipster.Client(self.config, self.args)
-        self.client.client_update(client_action)
-        self.client.sock.connect.assert_called_with(os.path.join(self.data_dir, socket_file))
-        self.client.sock.sendall.assert_called_with('{}:{}:0:'.format(client_action,
-                                                                      board).encode('utf-8'))
+        self.client.update()
+        # Get a handle to the sock object returned by the mocked socket.socket
+        sock = mock_socket.return_value
+        self.assertTrue(mock.call.connect(os.path.join(self.data_dir, socket_file)) in sock.mock_calls)
+        self.assertTrue(mock.call.sendall('{}:{}:0:'.format(client_action, board).encode('utf-8')) in sock.mock_calls)
 
     @mock.patch('clipster.socket.socket')
     def test_client_output(self, mock_socket):
@@ -117,23 +119,26 @@ class ClientTestCase(unittest.TestCase):
 
         board = self.config.get('clipster', 'default_selection')
         socket_file = self.config.get('clipster', 'socket_file')
-        client_action = "BOARD"
+        client_action = "SELECT"
         # Count isn't actually tested here
         count = 99
-        self.args.nul = '\x00'
+        self.args.nul = True
+        self.args.select = True
+        self.args.number = 99
         client = clipster.Client(self.config, self.args)
         # Describe what recv should expect as a return value
-        client.sock.recv.side_effect = [json.dumps(self.history[board]).encode('utf-8'), ""]
+        sock = mock_socket.return_value
+        sock.recv.side_effect = [json.dumps(self.history[board]).encode('utf-8'), ""]
         # We probably don't need to test for recv, shutdown, close etc, but leave as examples for now
-        output = client.client_output(client_action, count)
-        client.sock.connect.assert_called_with(os.path.join(self.data_dir, socket_file))
-        client.sock.sendall.assert_called_with('{}:{}:{}:'.format(client_action,
-                                                                  board, count).encode('utf-8'))
-        client.sock.shutdown.assert_called_with(mock.ANY)
-        client.sock.recv.assert_called_with(mock.ANY)
-        client.sock.close.assert_called_with()
+        output = client.output()
 
-        self.assertEqual(output, self.args.nul.join(self.history[board]))
+        self.assertTrue(mock.call.connect(os.path.join(self.data_dir, socket_file)) in sock.mock_calls)
+        self.assertTrue(mock.call.sendall('{}:{}:{}:'.format(client_action, board, count).encode('utf-8')) in sock.mock_calls)
+        self.assertTrue(mock.call.shutdown(mock.ANY) in sock.mock_calls)
+        self.assertTrue(mock.call.recv(mock.ANY) in sock.mock_calls)
+        self.assertTrue(mock.call.close() in sock.mock_calls)
+
+        self.assertEqual(output, '\x00'.join(self.history[board]))
 
 
 class DaemonTestCase(unittest.TestCase):

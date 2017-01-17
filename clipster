@@ -16,6 +16,7 @@ import logging
 import tempfile
 import re
 import stat
+from contextlib import closing
 from gi import require_version
 require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GLib, GObject
@@ -90,72 +91,70 @@ class Client(object):
     def __init__(self, config, args):
         self.config = config
         self.args = args
-        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.client_action = args.select and "SELECT" or (args.ignore and "IGNORE" or "BOARD")
+        logging.debug("client_action: %s", self.client_action)
 
-    def client_update(self, client_action):
+    def update(self):
         """Send a signal and (optional) data from STDIN to daemon socket."""
 
         logging.debug("Connecting to server to update.")
-        try:
-            self.sock.connect(self.config.get('clipster', "socket_file"))
-        except socket.error:
-            raise ClipsterError("Error connecting to socket. Is daemon running?")
-        logging.debug("Sending request to server.")
-        # Fix for http://bugs.python.org/issue1633941 in py 2.x
-        # Send message 'header' - count is 0 (i.e to be ignored)
-        self.sock.sendall("{0}:{1}:0:".format(client_action,
-                                              self.config.get('clipster',
-                                                              'default_selection')).encode('utf-8'))
+        with closing(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)) as sock:
+            try:
+                sock.connect(self.config.get('clipster', "socket_file"))
+            except socket.error:
+                raise ClipsterError("Error connecting to socket. Is daemon running?")
+            logging.debug("Sending request to server.")
+            # Fix for http://bugs.python.org/issue1633941 in py 2.x
+            # Send message 'header' - count is 0 (i.e to be ignored)
+            sock.sendall("{0}:{1}:0:".format(self.client_action,
+                                             self.config.get('clipster',
+                                                             'default_selection')).encode('utf-8'))
 
-        if client_action == "BOARD":
-            # Send data read from stdin
-            buf_size = 8192
-            while True:
-                if sys.stdin.isatty():
-                    recv = sys.stdin.readline(buf_size)
-                else:
-                    recv = sys.stdin.read(buf_size)
-                if not recv:
-                    break
-                if hasattr(recv, 'decode'):
-                    recv = recv.decode('utf-8')
-                self.sock.sendall(recv.encode('utf-8'))
+            if self.client_action == "BOARD":
+                # Send data read from stdin
+                buf_size = 8192
+                while True:
+                    if sys.stdin.isatty():
+                        recv = sys.stdin.readline(buf_size)
+                    else:
+                        recv = sys.stdin.read(buf_size)
+                    if not recv:
+                        break
+                    if hasattr(recv, 'decode'):
+                        recv = recv.decode('utf-8')
+                    sock.sendall(recv.encode('utf-8'))
 
-        self.sock.close()
-
-    def client_output(self, client_action, count):
+    def output(self):
         """Send a signal and count to daemon socket requesting items from history."""
 
         logging.debug("Connecting to server to query history.")
-        try:
-            self.sock.connect(self.config.get('clipster', "socket_file"))
-        except socket.error:
-            raise ClipsterError("Error connecting to socket. Is daemon running?")
-        logging.debug("Sending request to server.")
-        # Send message 'header'
-        self.sock.sendall("{0}:{1}:{2}:".format(client_action,
-                                                self.config.get('clipster',
-                                                                'default_selection'),
-                                                count).encode('utf-8'))
-
-        self.sock.shutdown(socket.SHUT_WR)
-        data = []
-        while True:
+        with closing(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)) as sock:
             try:
-                recv = self.sock.recv(8192)
-                logging.debug("Received data from server.")
-                if not recv:
-                    break
-                data.append(recv.decode('utf-8'))
+                sock.connect(self.config.get('clipster', "socket_file"))
             except socket.error:
-                break
-        self.sock.close()
+                raise ClipsterError("Error connecting to socket. Is daemon running?")
+            logging.debug("Sending request to server.")
+            # Send message 'header'
+            sock.sendall("{0}:{1}:{2}:".format(self.client_action,
+                                               self.config.get('clipster',
+                                                               'default_selection'),
+                                               self.args.number).encode('utf-8'))
+
+            sock.shutdown(socket.SHUT_WR)
+            data = []
+            while True:
+                try:
+                    recv = sock.recv(8192)
+                    logging.debug("Received data from server.")
+                    if not recv:
+                        break
+                    data.append(recv.decode('utf-8'))
+                except socket.error:
+                    break
         if data:
             # data is a list of 1 or more parts of a json string.
             # Reassemble this, then join with delimiter
-            delim = '\n'
-            if self.args.nul:
-                delim = '\x00'
+            delim = self.args.nul and '\0' or '\n'
             return delim.join(json.loads(''.join(data)))
 
 
@@ -166,6 +165,7 @@ class Daemon(object):
 
     def __init__(self, config):
         """Set up clipboard objects and history dict."""
+
         self.config = config
         self.patterns = []
         self.window = self.p_id = self.c_id = self.sock = None
@@ -243,8 +243,7 @@ class Daemon(object):
 
         # Create windows & widgets
         # Gtk complains about dialogs with no parents, so create one
-        rootwin = Gtk.Window()
-        self.window = Gtk.Dialog(title="Clipster", parent=rootwin)
+        self.window = Gtk.Dialog(title="Clipster", parent=Gtk.Window())
         scrolled = Gtk.ScrolledWindow()
         model = Gtk.ListStore(str, str)
         tree = Gtk.TreeView(model)
@@ -297,6 +296,7 @@ class Daemon(object):
 
     def read_history_file(self):
         """Read clipboard history from file."""
+
         try:
             with open(self.hist_file, 'r') as hist_f:
                 self.boards.update(json.load(hist_f))
@@ -391,8 +391,8 @@ class Daemon(object):
                             self.remove_history(board, match)
                         self.boards[board].append(match)
             except re.error as exc:
-
                 logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.args[0])
+
         if self.config.getboolean('clipster', 'extract_uris'):
             # Simple uri regex
             url_re = r'\b\S+://\S+\b'
@@ -408,12 +408,11 @@ class Daemon(object):
             for email in set(re.findall(mail_re, text)):
                 # Skip urls with auth info that look a bit like emails
                 # e.g. http://bob:passwd@example.com
-                if ':' not in email:
-                    if email != text:
-                        logging.debug("Email found: %s", email)
-                        if not self.config.getboolean('clipster', 'duplicates'):
-                            self.remove_history(board, email)
-                        self.boards[board].append(email)
+                if ':' not in email and email != text:
+                    logging.debug("Email found: %s", email)
+                    if not self.config.getboolean('clipster', 'duplicates'):
+                        self.remove_history(board, email)
+                    self.boards[board].append(email)
 
         self.boards[board].append(text)
         # Flag that the history file needs updating
@@ -522,10 +521,7 @@ class Daemon(object):
             conn.close()
             return False
         if not recv or recv_total > self.config.getint('clipster', 'max_input'):
-            try:
-                self.process_msg(conn)
-            except ClipsterError as exc:
-                logging.error(exc)
+            self.process_msg(conn)
             conn.close()
             # Return false to remove conn from GObject.io_add_watch list
             return False
@@ -534,30 +530,30 @@ class Daemon(object):
     def process_msg(self, conn):
         """Process message received from client, sending reply if required."""
 
-        if self.client_msgs[conn.fileno()]:
-            msg_str = ''.join(self.client_msgs[conn.fileno()])
-            try:
-                sig, board, count, content = msg_str.split(':', 3)
-                count = int(count)
-            except ValueError:
-                logging.error("Invalid message received via socket: %s", msg_str)
-            else:
-                logging.debug("Received: sig:%s, board:%s, count:%s", sig, board, count)
-                if sig == "SELECT":
-                    self.selection_widget(board)
-                elif sig == "BOARD":
-                    if content:
-                        logging.debug("Received content: %s", content)
-                        self.update_board(board, content)
-                    elif count:
-                        logging.debug("Sending requested selection(s): %s",
-                                      self.boards[board][-count:])
-                        # Send list (reversed) as json to preserve structure
-                        conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
-                elif sig == "IGNORE":
-                    self.ignore_next[board] = True
-            finally:
-                del self.client_msgs[conn.fileno()]
+        try:
+            msg_str = ''.join(self.client_msgs.pop(conn.fileno()))
+        except KeyError:
+            return
+        try:
+            sig, board, count, content = msg_str.split(':', 3)
+            count = int(count)
+        except ValueError:
+            logging.error("Invalid message received via socket: %s", msg_str)
+            return
+        logging.debug("Received: sig:%s, board:%s, count:%s", sig, board, count)
+        if sig == "SELECT":
+            self.selection_widget(board)
+        elif sig == "BOARD":
+            if content:
+                logging.debug("Received content: %s", content)
+                self.update_board(board, content)
+            elif count:
+                logging.debug("Sending requested selection(s): %s",
+                              self.boards[board][-count:])
+                # Send list (reversed) as json to preserve structure
+                conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
+        elif sig == "IGNORE":
+            self.ignore_next[board] = True
 
     def prepare_files(self):
         """Ensure that all files and sockets used
@@ -768,9 +764,6 @@ def main():
             logging.error(exc)
             return 1
 
-    client_action = args.select and "SELECT" or (args.ignore and "IGNORE" or "BOARD")
-    logging.debug("client_action: %s", client_action)
-
     if args.primary:
         if 'PRIMARY' not in config.get('clipster', 'active_selections'):
             logging.error("PRIMARY not in 'active_selections' in config.")
@@ -791,15 +784,14 @@ def main():
         else:
             try:
                 # Ask server for clipboard history
-                print(client.client_output(client_action, args.number), end='')
+                print(client.output(), end='')
             except ClipsterError as exc:
                 logging.error(exc)
                 return 1
-
     else:
         try:
             # Read from stdin and send to server
-            client.client_update(client_action)
+            client.update()
         except ClipsterError as exc:
             logging.error(exc)
             return 1
