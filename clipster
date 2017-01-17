@@ -428,63 +428,65 @@ class Daemon(object):
         logging.debug("selection: %s", selection)
         active = self.config.get('clipster', 'active_selections').split(',')
 
-        if selection in active:
-            # Ignore owner-change events for apps with certain WM_CLASS values
-            if self.config.get('clipster', 'filter_classes'):
-                if not Wnck:
-                    logging.error("'filter_classes' requires Wnck (libwnck3).")
-                    return True
-                classes = self.config.get('clipster', 'filter_classes').lower().split(',')
-                logging.debug("Filter classes enabled for: %s", classes)
-                screen = Wnck.Screen.get_default()
-                screen.force_update()
-                active_window = screen.get_active_window()
-                wm_class = active_window.get_class_group_name()
-                logging.debug("Active window class is %s", wm_class)
-                if wm_class.lower() in classes:
-                    logging.debug("Ignoring active window.")
-                    return True
+        if selection not in active:
+            return
 
-            logging.debug("Selection in 'active_selections'")
-            event_id = selection == "PRIMARY" and self.p_id or self.c_id
-            # Some apps update primary during mouse drag (chrome)
-            # Block at start to prevent repeated triggering
-            board.handler_block(event_id)
-            # FIXME: this devs hack is a bit verbose. Look instead at
-            # gdk_seat_get_pointer -> gdk_device_get_state
-            # once GdkSeat is in stable
-            for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
-                if dev.get_source() == Gdk.InputSource.MOUSE:
-                    while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(dev)[3]:
-                        # Do nothing while mouse button is held down (selection drag)
-                        pass
-                break
+        # Ignore owner-change events for apps with certain WM_CLASS values
+        if self.config.get('clipster', 'filter_classes'):
+            if not Wnck:
+                logging.error("'filter_classes' requires Wnck (libwnck3).")
+                return True
+            classes = self.config.get('clipster', 'filter_classes').lower().split(',')
+            logging.debug("Filter classes enabled for: %s", classes)
+            screen = Wnck.Screen.get_default()
+            screen.force_update()
+            active_window = screen.get_active_window()
+            wm_class = active_window.get_class_group_name()
+            logging.debug("Active window class is %s", wm_class)
+            if wm_class.lower() in classes:
+                logging.debug("Ignoring active window.")
+                return True
 
-            # Read clipboard
-            try:
-                last_item = self.boards[selection][-1]
-            except IndexError:
-                last_item = ""
-            # First item in tuple is bool, False if clipboard is empty
-            # Would use event.reason, but many apps don't set this properly.
-            if not board.wait_for_targets()[0]:
-                if last_item:
-                    logging.debug("Clipboard cleared. Reinstating from history.")
-                    self.update_board(selection, self.boards[selection][-1])
-            elif board.wait_is_text_available():
-                logging.debug("Selection is text.")
-                text = self.read_board(selection)
-                if text:
-                    self.update_history(selection, text)
-                else:
-                    if last_item:
-                        logging.debug("Selection empty. Reinstating from history.")
-                        self.update_board(selection, last_item)
+        logging.debug("Selection in 'active_selections'")
+        event_id = selection == "PRIMARY" and self.p_id or self.c_id
+        # Some apps update primary during mouse drag (chrome)
+        # Block at start to prevent repeated triggering
+        board.handler_block(event_id)
+        # FIXME: this devs hack is a bit verbose. Look instead at
+        # gdk_seat_get_pointer -> gdk_device_get_state
+        # once GdkSeat is in stable
+        for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
+            if dev.get_source() == Gdk.InputSource.MOUSE:
+                while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(dev)[3]:
+                    # Do nothing while mouse button is held down (selection drag)
+                    pass
+            break
+
+        # Read clipboard
+        try:
+            last_item = self.boards[selection][-1]
+        except IndexError:
+            last_item = ""
+        # First item in tuple is bool, False if clipboard is empty
+        # Would use event.reason, but many apps don't set this properly.
+        if not board.wait_for_targets()[0]:
+            if last_item:
+                logging.debug("Clipboard cleared. Reinstating from history.")
+                self.update_board(selection, self.boards[selection][-1])
+        elif board.wait_is_text_available():
+            logging.debug("Selection is text.")
+            text = self.read_board(selection)
+            if text:
+                self.update_history(selection, text)
             else:
-                logging.debug("Selection is not text - ignoring.")
+                if last_item:
+                    logging.debug("Selection empty. Reinstating from history.")
+                    self.update_board(selection, last_item)
+        else:
+            logging.debug("Selection is not text - ignoring.")
 
-            # Unblock event handling
-            board.handler_unblock(event_id)
+        # Unblock event handling
+        board.handler_unblock(event_id)
 
     def socket_accept(self, sock, _):
         """Accept a connection and 'select' it for readability."""
