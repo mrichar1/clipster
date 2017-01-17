@@ -762,8 +762,8 @@ def main():
         client = Client(config, args)
 
         if args.output:
-            if args.select | args.ignore:
-                raise ClipsterError("Can't use --select and --output or --ignore together.")
+            if args.select or args.ignore:
+                raise ClipsterError("Can't use --output with --select or --ignore.")
             else:
                 # Ask server for clipboard history
                 print(client.output(), end='')
