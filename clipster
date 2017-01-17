@@ -510,17 +510,22 @@ class Daemon(object):
     def socket_recv(self, conn, _):
         """Try to recv from an accepted connection."""
 
-        recv_total = 0
+        max_input = self.config.getint('clipster', 'max_input')
+        recv_total = sum((len(x) for x in self.client_msgs[conn.fileno()]))
         try:
-            recv = conn.recv(8192)
-            recv_total += len(recv)
-            self.client_msgs[conn.fileno()].append(recv.decode('utf-8'))
+            recv = conn.recv(min(8192, max_input - recv_total))
+            try:
+                recv = recv.decode('utf-8')
+            except (UnicodeDecodeError, UnicodeEncodeError, AttributeError):
+                pass
+            self.client_msgs[conn.fileno()].append(recv)
+            recv_total = sum((len(x) for x in self.client_msgs[conn.fileno()]))
         except socket.error as exc:
             logging.debug("Socket error %s", exc)
-            # Return false to remove conn from GObject.io_add_watch list
             conn.close()
+            # Return false to remove conn from GObject.io_add_watch list
             return False
-        if not recv or recv_total > self.config.getint('clipster', 'max_input'):
+        if not recv or recv_total >= max_input:
             self.process_msg(conn)
             conn.close()
             # Return false to remove conn from GObject.io_add_watch list

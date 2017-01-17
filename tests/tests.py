@@ -276,6 +276,28 @@ class DaemonTestCase(unittest.TestCase):
         self.daemon.update_history(board, 'shortening')
         self.assertTrue(len(self.daemon.boards[board]) > 1)
 
+    @mock.patch('clipster.socket.socket')
+    def test_max_input(self, mock_socket):
+        """Test that the max_input limit works."""
+
+        max_input = self.config.getint('clipster', 'max_input')
+        header = "BOARD:PRIMARY:0:"
+        # Set the text to be the same length as max_input
+        # so that total length (plus header) exceeds it.
+        text = "x" * max_input
+        conn = mock_socket.connect
+        # Make mock conn.recv simulate bufsize 'trimming'
+        conn.recv.side_effect = lambda l: (header + text)[:l]
+        # Set up a fake conn fileno and client_msgs dictionary
+        conn.fileno.return_value = 0
+        self.daemon.client_msgs = {0: []}
+        while True:
+            if not self.daemon.socket_recv(conn, None):
+                break
+        text = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY).wait_for_text()
+        # check that text length has been trimmed to max_input
+        self.assertEqual(len(header) + len(text), max_input)
+
     def test_sync_selections(self):
         """Test that sync_selections syncs between boards."""
         self.config.set('clipster', 'sync_selections', 'yes')
