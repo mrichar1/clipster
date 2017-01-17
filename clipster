@@ -327,13 +327,7 @@ class Daemon(object):
     def read_board(self, board):
         """Return the text on the clipboard."""
 
-        text = getattr(self, board.lower()).wait_for_text()
-        try:
-            # Needed for unicode comparisons - see issue #1
-            text = text.decode('utf-8')
-        except (UnicodeDecodeError, UnicodeEncodeError, AttributeError):
-            pass
-        return text
+        return safe_decode(getattr(self, board.lower()).wait_for_text())
 
     def update_board(self, board, data=""):
         """Update a clipboard. Will trigger an owner-change event."""
@@ -360,11 +354,7 @@ class Daemon(object):
 
         logging.debug("Updating clipboard: %s", board)
 
-        try:
-            # Needed for unicode comparisons - see issue #1
-            text = text.decode('utf-8')
-        except (UnicodeDecodeError, UnicodeEncodeError, AttributeError):
-            pass
+        text = safe_decode(text)
 
         if not self.config.getboolean('clipster', 'duplicates'):
             self.remove_history(board, text)
@@ -513,11 +503,7 @@ class Daemon(object):
         max_input = self.config.getint('clipster', 'max_input')
         recv_total = sum((len(x) for x in self.client_msgs[conn.fileno()]))
         try:
-            recv = conn.recv(min(8192, max_input - recv_total))
-            try:
-                recv = recv.decode('utf-8')
-            except (UnicodeDecodeError, UnicodeEncodeError, AttributeError):
-                pass
+            recv = safe_decode(conn.recv(min(8192, max_input - recv_total)))
             self.client_msgs[conn.fileno()].append(recv)
             recv_total = sum((len(x) for x in self.client_msgs[conn.fileno()]))
         except socket.error as exc:
@@ -784,6 +770,16 @@ def main():
         else:
             # Read from stdin and send to server
             client.update()
+
+
+def safe_decode(data):
+    """Convenience method to ensure everything is utf-8."""
+
+    try:
+        data = data.decode('utf-8')
+    except (UnicodeDecodeError, UnicodeEncodeError, AttributeError):
+        pass
+    return data
 
 if __name__ == "__main__":
     try:
