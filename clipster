@@ -198,8 +198,8 @@ class Daemon(object):
         """Delete selected history entries."""
 
         model, treepaths = tree_select.get_selected_rows()
-        treeiters = [model.get_iter(x) for x in treepaths]
-        for treeiter in treeiters:
+        for tree in treepaths:
+            treeiter = model.get_iter(tree)
             item = model[treeiter][1]
             logging.debug("Deleting history entry: %s", item)
             # If deleted item is currently on the clipboard, clear it
@@ -227,16 +227,14 @@ class Daemon(object):
 
         # Get selection
         model, treepaths = tree_select.get_selected_rows()
-        treeiters = [model.get_iter(x) for x in treepaths]
-        if treeiters:
-            # Step over list in reverse, moving to top of board
-            for treeiter in treeiters[::-1]:
-                # Select full text from row
-                data = model[treeiter][1]
-                self.update_board(board, data)
-                self.update_history(board, data)
-            model.clear()
-            self.window.hide()
+        # Step over list in reverse, moving to top of board
+        for tree in treepaths[::-1]:
+            # Select full text from row
+            data = model[model.get_iter(tree)][1]
+            self.update_board(board, data)
+            self.update_history(board, data)
+        model.clear()
+        self.window.hide()
 
     def selection_widget(self, board):
         """GUI window for selecting items from clipboard history."""
