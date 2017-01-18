@@ -559,7 +559,6 @@ class Daemon(object):
                 if self.read_board(board) == last:
                     self.update_board(board)
 
-
     def prepare_files(self):
         """Ensure that all files and sockets used
         by the daemon are available."""
