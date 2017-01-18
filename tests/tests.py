@@ -333,7 +333,6 @@ class DaemonTestCase(unittest.TestCase):
         self.daemon.process_msg(conn)
         mock_update_board.assert_called_with(board, msg)
 
-
     @mock.patch('clipster.Daemon.update_board')
     def test_process_msg_output(self, mock_update_board):
         """Process a client message to output a board's contents."""
@@ -352,6 +351,63 @@ class DaemonTestCase(unittest.TestCase):
         args, kwargs = conn.sendall.call_args
         msg_list = json.loads(args[0].decode('utf-8'))
         self.assertListEqual(self.history[board][-count:], msg_list)
+
+    def test_process_msg_delete_last(self):
+        """Process a client message to output a board's contents."""
+
+        # Set up a mock of some of a socket connection object
+        conn = mock.MagicMock()
+        conn.fileno.return_value = 1
+        conn.sendall.return_value = True
+        self.daemon.boards = self.history
+
+        action = 'DELETE'
+        board = 'PRIMARY'
+        board_length = len(self.history[board])
+        count = 1
+        self.daemon.client_msgs = {1: '{}:{}:{}:'.format(action, board, count)}
+        self.daemon.process_msg(conn)
+        # Board should be one item less
+        self.assertEqual(board_length - len(self.history[board]), 1)
+
+    def test_process_msg_delete_pattern_match(self):
+        """Process a client message to output a board's contents."""
+
+        # Set up a mock of some of a socket connection object
+        conn = mock.MagicMock()
+        conn.fileno.return_value = 1
+        conn.sendall.return_value = True
+        self.daemon.boards = self.history
+
+        action = 'DELETE'
+        board = 'PRIMARY'
+        count = 1
+        pattern = "apple"
+        board_length = len(self.history[board])
+        self.daemon.client_msgs = {1: '{}:{}:{}:{}'.format(action, board, count, pattern)}
+        self.daemon.process_msg(conn)
+        # Board should be one item less
+        self.assertEqual(board_length - len(self.history[board]), 1)
+
+    def test_process_msg_delete_pattern_no_match(self):
+        """Process a client message to output a board's contents."""
+
+        # Set up a mock of some of a socket connection object
+        conn = mock.MagicMock()
+        conn.fileno.return_value = 1
+        conn.sendall.return_value = True
+        self.daemon.boards = self.history
+
+        action = 'DELETE'
+        board = 'PRIMARY'
+        count = 1
+        pattern = "notinhistory"
+        board_length = len(self.history[board])
+        self.daemon.client_msgs = {1: '{}:{}:{}:{}'.format(action, board, count, pattern)}
+        self.daemon.process_msg(conn)
+        # Board should be one item less
+        self.assertEqual(board_length, len(self.history[board]))
+
 
 
 if __name__ == "__main__":

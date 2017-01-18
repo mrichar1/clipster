@@ -91,7 +91,7 @@ class Client(object):
     def __init__(self, config, args):
         self.config = config
         self.args = args
-        self.client_action = args.select and "SELECT" or (args.ignore and "IGNORE" or "BOARD")
+        self.client_action = args.select and "SELECT" or (args.ignore and "IGNORE" or args.delete is not None and "DELETE" or "BOARD")
         logging.debug("client_action: %s", self.client_action)
 
     def update(self):
@@ -109,6 +109,10 @@ class Client(object):
             sock.sendall("{0}:{1}:0:".format(self.client_action,
                                              self.config.get('clipster',
                                                              'default_selection')).encode('utf-8'))
+
+            if self.client_action == "DELETE":
+                # Send delete args
+                sock.sendall(self.args.delete.encode('utf-8'))
 
             if self.client_action == "BOARD":
                 # Send data read from stdin
@@ -541,6 +545,20 @@ class Daemon(object):
                 conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
         elif sig == "IGNORE":
             self.ignore_next[board] = True
+        elif sig == "DELETE":
+            if content:
+                logging.debug("Deleting clipboard items matching text: %s", content)
+                self.remove_history(board, content)
+                # If deleted item is current on the clipboard, clear it
+                if self.read_board(board) == content:
+                    self.update_board(board)
+            else:
+                logging.debug("Deleting last item in history.")
+                last = self.boards[board].pop()
+                # If deleted item is current on the clipboard, clear it
+                if self.read_board(board) == last:
+                    self.update_board(board)
+
 
     def prepare_files(self):
         """Ensure that all files and sockets used
@@ -675,6 +693,8 @@ def parse_args(default_conf_file):
                            help="Output last selection from history. (See -n).")
     actiongrp.add_argument('-i', '--ignore', action="store_true",
                            help="Instruct daemon to ignore next update to clipboard.")
+    actiongrp.add_argument('-r', '--delete', action="store", nargs='?', const='',
+                           help="Delete from clipboard. Deletes matching text, or if no argument given, deletes last item.")
 
     parser.add_argument('-n', '--number', action="store", type=int, default=1,
                         help="Number of lines to output: defaults to 1 (See -o).")
