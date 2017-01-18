@@ -198,8 +198,8 @@ class Daemon(object):
         """Delete selected history entries."""
 
         model, treepaths = tree_select.get_selected_rows()
-        treeiters = [model.get_iter(x) for x in treepaths]
-        for treeiter in treeiters:
+        for tree in treepaths:
+            treeiter = model.get_iter(tree)
             item = model[treeiter][1]
             logging.debug("Deleting history entry: %s", item)
             # If deleted item is currently on the clipboard, clear it
@@ -227,16 +227,14 @@ class Daemon(object):
 
         # Get selection
         model, treepaths = tree_select.get_selected_rows()
-        treeiters = [model.get_iter(x) for x in treepaths]
-        if treeiters:
-            # Step over list in reverse, moving to top of board
-            for treeiter in treeiters[::-1]:
-                # Select full text from row
-                data = model[treeiter][1]
-                self.update_board(board, data)
-                self.update_history(board, data)
-            model.clear()
-            self.window.hide()
+        # Step over list in reverse, moving to top of board
+        for tree in treepaths[::-1]:
+            # Select full text from row
+            data = model[model.get_iter(tree)][1]
+            self.update_board(board, data)
+            self.update_history(board, data)
+        model.clear()
+        self.window.hide()
 
     def selection_widget(self, board):
         """GUI window for selecting items from clipboard history."""
@@ -298,7 +296,7 @@ class Daemon(object):
         """Read clipboard history from file."""
 
         try:
-            with open(self.hist_file, 'r') as hist_f:
+            with open(self.hist_file) as hist_f:
                 self.boards.update(json.load(hist_f))
         except FileNotFoundError as exc:
             if exc.errno != errno.ENOENT:
@@ -364,14 +362,13 @@ class Daemon(object):
         except IndexError:
             # List was empty
             last_item = ''
-        if last_item:
-            # Check for growing or shrinking, but ignore duplicates
-            if text != last_item and (text in last_item or last_item in text):
-                # Make length difference a positive number before comparing
-                if abs(len(text) - len(last_item)) <= diff:
-                    logging.debug("smart-update: removing.")
-                    # new selection is a longer/shorter version of previous
-                    self.boards[board].pop()
+        # Check for growing or shrinking, but ignore duplicates
+        if last_item and text != last_item and (text in last_item or last_item in text):
+            # Make length difference a positive number before comparing
+            if abs(len(text) - len(last_item)) <= diff:
+                logging.debug("smart-update: removing.")
+                # new selection is a longer/shorter version of previous
+                self.boards[board].pop()
         for pattern in self.patterns:
             try:
                 for match in set(re.findall(pattern, text)):
@@ -414,11 +411,10 @@ class Daemon(object):
             # Whichever board we just set, set the other one, if it's active
             boards = list(self.boards)
             boards.remove(board)
-            if boards[0] in self.config.get('clipster', 'active_selections'):
-                # Stop if the board already contains the text.
-                if self.read_board(boards[0]) != text:
-                    logging.debug("Syncing board %s to %s", board, boards[0])
-                    self.update_board(boards[0], text)
+            # Stop if the board already contains the text.
+            if boards[0] in self.config.get('clipster', 'active_selections') and self.read_board(boards[0]) != text:
+                logging.debug("Syncing board %s to %s", board, boards[0])
+                self.update_board(boards[0], text)
 
     def owner_change(self, board, event):
         """Handler for owner-change clipboard events."""
@@ -428,64 +424,64 @@ class Daemon(object):
         logging.debug("selection: %s", selection)
         active = self.config.get('clipster', 'active_selections').split(',')
 
-        if selection in active:
-            # Ignore owner-change events for apps with certain WM_CLASS values
-            if self.config.get('clipster', 'filter_classes'):
-                classes = self.config.get('clipster', 'filter_classes').lower().split(',')
-                if Wnck:
-                    logging.debug("Filter classes enabled for: %s", classes)
-                    screen = Wnck.Screen.get_default()
-                    screen.force_update()
-                    active_window = screen.get_active_window()
-                    wm_class = active_window.get_class_group_name()
-                    logging.debug("Active window class is %s", wm_class)
-                    if wm_class.lower() in classes:
-                        logging.debug("Ignoring active window.")
-                        return True
-                else:
-                    logging.error("'filter_classes' requires Wnck (libwnck3).")
-                    return True
+        if selection not in active:
+            return
 
-            logging.debug("Selection in 'active_selections'")
-            event_id = selection == "PRIMARY" and self.p_id or self.c_id
-            # Some apps update primary during mouse drag (chrome)
-            # Block at start to prevent repeated triggering
-            board.handler_block(event_id)
-            # FIXME: this devs hack is a bit verbose. Look instead at
-            # gdk_seat_get_pointer -> gdk_device_get_state
-            # once GdkSeat is in stable
-            for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
-                if dev.get_source() == Gdk.InputSource.MOUSE:
-                    while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(dev)[3]:
-                        # Do nothing while mouse button is held down (selection drag)
-                        pass
-                break
+        # Ignore owner-change events for apps with certain WM_CLASS values
+        if self.config.get('clipster', 'filter_classes'):
+            if not Wnck:
+                logging.error("'filter_classes' requires Wnck (libwnck3).")
+                return True
+            classes = self.config.get('clipster', 'filter_classes').lower().split(',')
+            logging.debug("Filter classes enabled for: %s", classes)
+            screen = Wnck.Screen.get_default()
+            screen.force_update()
+            active_window = screen.get_active_window()
+            wm_class = active_window.get_class_group_name()
+            logging.debug("Active window class is %s", wm_class)
+            if wm_class.lower() in classes:
+                logging.debug("Ignoring active window.")
+                return True
 
-            # Read clipboard
-            try:
-                last_item = self.boards[selection][-1]
-            except IndexError:
-                last_item = ""
-            # First item in tuple is bool, False if clipboard is empty
-            # Would use event.reason, but many apps don't set this properly.
-            if not board.wait_for_targets()[0]:
-                if last_item:
-                    logging.debug("Clipboard cleared. Reinstating from history.")
-                    self.update_board(selection, self.boards[selection][-1])
-            elif board.wait_is_text_available():
-                logging.debug("Selection is text.")
-                text = self.read_board(selection)
-                if text:
-                    self.update_history(selection, text)
-                else:
-                    if last_item:
-                        logging.debug("Selection empty. Reinstating from history.")
-                        self.update_board(selection, last_item)
-            else:
-                logging.debug("Selection is not text - ignoring.")
+        logging.debug("Selection in 'active_selections'")
+        event_id = selection == "PRIMARY" and self.p_id or self.c_id
+        # Some apps update primary during mouse drag (chrome)
+        # Block at start to prevent repeated triggering
+        board.handler_block(event_id)
+        # FIXME: this devs hack is a bit verbose. Look instead at
+        # gdk_seat_get_pointer -> gdk_device_get_state
+        # once GdkSeat is in stable
+        for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
+            if dev.get_source() == Gdk.InputSource.MOUSE:
+                while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(dev)[3]:
+                    # Do nothing while mouse button is held down (selection drag)
+                    pass
+            break
 
-            # Unblock event handling
-            board.handler_unblock(event_id)
+        # Read clipboard
+        try:
+            last_item = self.boards[selection][-1]
+        except IndexError:
+            last_item = ""
+        # First item in tuple is bool, False if clipboard is empty
+        # Would use event.reason, but many apps don't set this properly.
+        if not board.wait_for_targets()[0]:
+            if last_item:
+                logging.debug("Clipboard cleared. Reinstating from history.")
+                self.update_board(selection, self.boards[selection][-1])
+        elif board.wait_is_text_available():
+            logging.debug("Selection is text.")
+            text = self.read_board(selection)
+            if text:
+                self.update_history(selection, text)
+            elif last_item:
+                logging.debug("Selection empty. Reinstating from history.")
+                self.update_board(selection, last_item)
+        else:
+            logging.debug("Selection is not text - ignoring.")
+
+        # Unblock event handling
+        board.handler_unblock(event_id)
 
     def socket_accept(self, sock, _):
         """Accept a connection and 'select' it for readability."""
@@ -556,17 +552,23 @@ class Daemon(object):
 
         # check for existing pid_file, and tidy up if appropriate
         with suppress_if_errno(FileNotFoundError, errno.ENOENT):
-            with open(self.pid_file, 'r') as runf_r:
-                pid = int(runf_r.read())
+            with open(self.pid_file) as runf_r:
                 try:
-                    # Do nothing, but raise an error if no such process
-                    os.kill(pid, 0)
-                    raise ClipsterError("Daemon already running: pid {}".format(pid))
-                except ProcessLookupError as exc:
-                    if exc.errno != errno.ESRCH:
-                        raise
-                    with suppress_if_errno(FileNotFoundError, errno.ENOENT):
-                        os.unlink(self.pid_file)
+                    pid = int(runf_r.read())
+                except ValueError:
+                    logging.debug("Invalid pid file, attempting to overwrite.")
+                else:
+                    # pid is an int, determine if this corresponds to a running daemon.
+                    try:
+                        # Do nothing, but raise an error if no such process
+                        os.kill(pid, 0)
+                        raise ClipsterError("Daemon already running: pid {}".format(pid))
+                    except ProcessLookupError as exc:
+                        if exc.errno != errno.ESRCH:
+                            raise
+                        # No process found, delete the pid file.
+                        with suppress_if_errno(FileNotFoundError, errno.ENOENT):
+                            os.unlink(self.pid_file)
 
         # Create pid file
         with open(self.pid_file, 'w') as runf_w:
@@ -588,7 +590,7 @@ class Daemon(object):
         if self.config.getboolean('clipster', 'extract_patterns'):
             try:
                 patfile = os.path.join(self.config.get('clipster', 'data_dir'), 'patterns')
-                with open(patfile, 'r') as pat_f:
+                with open(patfile) as pat_f:
                     self.patterns = [x.strip() for x in pat_f.read().splitlines()]
                     logging.debug("Loaded patterns: %s", ','.join(self.patterns))
 
