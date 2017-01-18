@@ -35,7 +35,7 @@ Clipster was designed to try to add a good selection of useful features, while a
 
 * Option to ignore clipboard updates form certain applications. (`filter_classes`)
 
-* Ability to delete items in clipboard history.
+* Ability to delete items in clipboard history from GUI or command-line.
 
 * One-off command to ignore next clipboard selection.
 
@@ -83,6 +83,8 @@ optional arguments:
                         Number of lines to output: defaults to 1 (See -o).
   -0, --nul             Use NUL character as output delimiter.
   -i, --ignore          Instruct daemon to ignore next update to clipboard.
+-r [DELETE], --delete [DELETE]
+                        Delete from clipboard. Deletes matching text, or if no argument given, deletes last item.
 ```
 
 
