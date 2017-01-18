@@ -661,20 +661,20 @@ def parse_args(default_conf_file):
     # Mutually exclusive client and daemon options.
     boardgrp = parser.add_mutually_exclusive_group()
     boardgrp.add_argument('-p', '--primary', action="store_const", const='PRIMARY',
-                        help="Query, or write STDIN to, the PRIMARY clipboard.")
+                          help="Query, or write STDIN to, the PRIMARY clipboard.")
     boardgrp.add_argument('-c', '--clipboard', action="store_const", const='CLIPBOARD',
-                        help="Query, or write STDIN to, the CLIPBOARD clipboard.")
+                          help="Query, or write STDIN to, the CLIPBOARD clipboard.")
     boardgrp.add_argument('-d', '--daemon', action="store_true",
-                        help="Launch the daemon.")
+                          help="Launch the daemon.")
 
     # Mutually exclusive client actions
     actiongrp = parser.add_mutually_exclusive_group()
     actiongrp.add_argument('-s', '--select', action="store_true",
-                        help="Launch the clipboard history selection window.")
+                           help="Launch the clipboard history selection window.")
     actiongrp.add_argument('-o', '--output', action="store_true",
-                        help="Output last selection from history. (See -n).")
+                           help="Output last selection from history. (See -n).")
     actiongrp.add_argument('-i', '--ignore', action="store_true",
-                        help="Instruct daemon to ignore next update to clipboard.")
+                           help="Instruct daemon to ignore next update to clipboard.")
 
     parser.add_argument('-n', '--number', action="store", type=int, default=1,
                         help="Number of lines to output: defaults to 1 (See -o).")
