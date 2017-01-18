@@ -81,7 +81,7 @@ class ClientTestCase(unittest.TestCase):
         cls.data_dir = "/data_dir"
         cls.config = clipster.parse_config(cls.args, cls.data_dir)
         cls.logger = logging.getLogger()
-#        logger.level = logging.DEBUG
+#        cls.logger.level = logging.DEBUG
 
     @classmethod
     def tearDownClass(cls):
@@ -164,13 +164,11 @@ class DaemonTestCase(unittest.TestCase):
         self.history = {"CLIPBOARD": ["ape", "bear\nbear", "cat\ncat\n"], "PRIMARY": ["apple", "banana\nbanana", "clementine\nclementine\n"]}
         self.daemon = clipster.Daemon(self.config)
 
-
     def tearDown(self):
         self.history = None
 
     def test_read_history_file(self):
         """Test that read_history_file correctly reads json from a file."""
-
 
         hist_file = self.config.get('clipster', 'history_file')
         with mock.patch.object(builtins, 'open', mock.mock_open(read_data=json.dumps(self.history))) as mock_file:
@@ -407,7 +405,6 @@ class DaemonTestCase(unittest.TestCase):
         self.daemon.process_msg(conn)
         # Board should be one item less
         self.assertEqual(board_length, len(self.history[board]))
-
 
 
 if __name__ == "__main__":
