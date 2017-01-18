@@ -658,22 +658,28 @@ def parse_args(default_conf_file):
                         help="Path to config file.")
     parser.add_argument('-l', '--log_level', action="store", default="INFO",
                         help="Set log level: DEBUG, INFO (default), WARNING, ERROR, CRITICAL")
-    parser.add_argument('-p', '--primary', action="store_true",
+    # Mutually exclusive client and daemon options.
+    boardgrp = parser.add_mutually_exclusive_group()
+    boardgrp.add_argument('-p', '--primary', action="store_const", const='PRIMARY',
                         help="Query, or write STDIN to, the PRIMARY clipboard.")
-    parser.add_argument('-c', '--clipboard', action="store_true",
+    boardgrp.add_argument('-c', '--clipboard', action="store_const", const='CLIPBOARD',
                         help="Query, or write STDIN to, the CLIPBOARD clipboard.")
-    parser.add_argument('-d', '--daemon', action="store_true",
+    boardgrp.add_argument('-d', '--daemon', action="store_true",
                         help="Launch the daemon.")
-    parser.add_argument('-s', '--select', action="store_true",
+
+    # Mutually exclusive client actions
+    actiongrp = parser.add_mutually_exclusive_group()
+    actiongrp.add_argument('-s', '--select', action="store_true",
                         help="Launch the clipboard history selection window.")
-    parser.add_argument('-o', '--output', action="store_true",
+    actiongrp.add_argument('-o', '--output', action="store_true",
                         help="Output last selection from history. (See -n).")
+    actiongrp.add_argument('-i', '--ignore', action="store_true",
+                        help="Instruct daemon to ignore next update to clipboard.")
+
     parser.add_argument('-n', '--number', action="store", type=int, default=1,
                         help="Number of lines to output: defaults to 1 (See -o).")
     parser.add_argument('-0', '--nul', action="store_true",
                         help="Use NUL character as output delimiter.")
-    parser.add_argument('-i', '--ignore', action="store_true",
-                        help="Instruct daemon to ignore next update to clipboard.")
 
     return parser.parse_args()
 
@@ -752,23 +758,15 @@ def main():
     if args.daemon:
         Daemon(config).run()
     else:
-        if args.primary:
-            if 'PRIMARY' not in config.get('clipster', 'active_selections'):
-                raise ClipsterError("PRIMARY not in 'active_selections' in config.")
-            config.set('clipster', 'default_selection', 'PRIMARY')
-        elif args.clipboard:
-            if 'CLIPBOARD' not in config.get('clipster', 'active_selections'):
-                raise ClipsterError("CLIPBOARD not in active_selections' in config.")
-            config.set('clipster', 'default_selection', 'CLIPBOARD')
-
+        board = args.primary or args.clipboard or config.get('clipster', 'default_selection')
+        if board not in config.get('clipster', 'active_selections'):
+            raise ClipsterError("{0} not in 'active_selections' in config.".format(board))
+        config.set('clipster', 'default_selection', board)
         client = Client(config, args)
 
         if args.output:
-            if args.select or args.ignore:
-                raise ClipsterError("Can't use --output with --select or --ignore.")
-            else:
-                # Ask server for clipboard history
-                print(client.output(), end='')
+            # Ask server for clipboard history
+            print(client.output(), end='')
         else:
             # Read from stdin and send to server
             client.update()
