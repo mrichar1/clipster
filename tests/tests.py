@@ -176,8 +176,8 @@ class DaemonTestCase(unittest.TestCase):
         self.assertEqual(self.daemon.boards, self.history)
 
     @mock.patch('clipster.os')
-    @mock.patch('clipster.tempfile.mkstemp')
-    def test_write_history_file_json(self, mock_mkstemp, mock_os):
+    @mock.patch('clipster.tempfile.NamedTemporaryFile')
+    def test_write_history_file_json(self, mock_tmp, mock_os):
         """Test that write_history_file generates correct json output."""
 
         # Set the history size to 2 to check the file is correctly truncated
@@ -186,12 +186,13 @@ class DaemonTestCase(unittest.TestCase):
         self.daemon.boards = self.history
         self.daemon.update_history_file = True
         hist_file = self.config.get('clipster', 'history_file')
-        # Fake return of fd and fname for mkstemp to succeed
-        mock_mkstemp.return_value = (1, "test")
+        # Fake instantiation of context manager
+        mock_file = mock.MagicMock()
+        mock_tmp.return_value.__enter__.return_value = mock_file
         self.daemon.write_history_file()
-        args, kwargs = mock_os.write.call_args
-        saved_history = json.loads(args[1].decode('utf-8'))
-        # Check the history still has same keys
+        # Get the json passed to write()
+        saved_history = json.loads(mock_file.mock_calls[0][1][0].decode('utf-8'))
+        # Check the written history still has same keys
         self.assertEqual(saved_history.keys(), self.history.keys())
         # Check that there are only 2 items in each list
         self.assertTrue(all(len(x) == 2 for x in saved_history.values()))

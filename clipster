@@ -315,11 +315,11 @@ class Daemon(object):
             limit = self.config.getint('clipster', 'history_size')
             # If limit is 0, don't write to file
             if limit:
-                logging.debug("Writing history to file.")
-                tmp_fd, tmp_name = tempfile.mkstemp(dir=self.config.get('clipster', 'data_dir'))
                 hist = {x: y[-limit:] for x, y in self.boards.items()}
-                os.write(tmp_fd, json.dumps(hist).encode('utf-8'))
-                os.rename(tmp_name, self.hist_file)
+                logging.debug("Writing history to file.")
+                with tempfile.NamedTemporaryFile(dir=self.config.get('clipster', 'data_dir'), delete=False) as tmp_file:
+                    tmp_file.write(json.dumps(hist).encode('utf-8'))
+                os.rename(tmp_file.name, self.hist_file)
                 self.update_history_file = False
         else:
             logging.debug("History unchanged - not writing to file.")
