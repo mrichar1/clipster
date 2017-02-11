@@ -159,6 +159,8 @@ class Client(object):
             # data is a list of 1 or more parts of a json string.
             # Reassemble this, then join with delimiter
             delim = self.args.nul and '\0' or '\n'
+            if self.args.marker:
+                delim = delim + self.args.marker + delim
             return delim.join(json.loads(''.join(data)))
 
 
@@ -699,6 +701,8 @@ def parse_args(default_conf_file):
                         help="Number of lines to output: defaults to 1 (See -o).")
     parser.add_argument('-0', '--nul', action="store_true",
                         help="Use NUL character as output delimiter.")
+    parser.add_argument('-m', '--marker',
+                        help="Interleave marker between output lines.")
 
     return parser.parse_args()
 
