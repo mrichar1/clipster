@@ -122,7 +122,7 @@ class ClientTestCase(unittest.TestCase):
         client_action = "SELECT"
         # Count isn't actually tested here
         count = 99
-        self.args.nul = True
+        self.args.delim = '\0'
         self.args.select = True
         self.args.number = 99
         client = clipster.Client(self.config, self.args)
@@ -138,7 +138,7 @@ class ClientTestCase(unittest.TestCase):
         self.assertTrue(mock.call.recv(mock.ANY) in sock.mock_calls)
         self.assertTrue(mock.call.close() in sock.mock_calls)
 
-        self.assertEqual(output, '\x00'.join(self.history[board]))
+        self.assertEqual(output, '\0'.join(self.history[board]))
 
 
 class DaemonTestCase(unittest.TestCase):

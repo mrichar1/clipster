@@ -62,8 +62,8 @@ There is an aur package available for Arch Linux users: [clipster-git](https://a
 
 ```
 ~$ clipster -h
-usage: clipster [-h] [-f CONFIG] [-l LOG_LEVEL] [-p] [-c] [-d] [-s] [-o]
-                [-n NUMBER] [-0] [-i]
+usage: clipster [-h] [-f CONFIG] [-l LOG_LEVEL] [-p | -c | -d]
+                [-s | -o | -i | -r [DELETE]] [-n NUMBER] [-0] [-m DELIM]
 
 Clipster clipboard manager.
 
@@ -79,12 +79,16 @@ optional arguments:
   -d, --daemon          Launch the daemon.
   -s, --select          Launch the clipboard history selection window.
   -o, --output          Output last selection from history. (See -n).
+  -i, --ignore          Instruct daemon to ignore next update to clipboard.
+  -r [DELETE], --delete [DELETE]
+                        Delete from clipboard. Deletes matching text, or if no
+                        argument given, deletes last item.
   -n NUMBER, --number NUMBER
                         Number of lines to output: defaults to 1 (See -o).
   -0, --nul             Use NUL character as output delimiter.
-  -i, --ignore          Instruct daemon to ignore next update to clipboard.
--r [DELETE], --delete [DELETE]
-                        Delete from clipboard. Deletes matching text, or if no argument given, deletes last item.
+
+  -m DELIM, --delim DELIM
+                        String to use as output delimiter (defaults to '\n')
 ```
 
 

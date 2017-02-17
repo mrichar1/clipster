@@ -158,8 +158,7 @@ class Client(object):
         if data:
             # data is a list of 1 or more parts of a json string.
             # Reassemble this, then join with delimiter
-            delim = self.args.nul and '\0' or '\n'
-            return delim.join(json.loads(''.join(data)))
+            return self.args.delim.join(json.loads(''.join(data)))
 
 
 class Daemon(object):
@@ -699,8 +698,10 @@ def parse_args(default_conf_file):
 
     parser.add_argument('-n', '--number', action="store", type=int, default=1,
                         help="Number of lines to output: defaults to 1 (See -o).")
-    parser.add_argument('-0', '--nul', action="store_true",
+    parser.add_argument('-0', '--nul', action="store_const", const='\0', dest='delim',
                         help="Use NUL character as output delimiter.")
+    parser.add_argument('-m', '--delim', action="store", default='\n',
+                        help="String to use as output delimiter (defaults to '\n')")
 
     return parser.parse_args()
 
