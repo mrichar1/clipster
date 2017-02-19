@@ -527,7 +527,7 @@ class Daemon(object):
         try:
             sig, board, count, content = msg_str.split(':', 3)
             count = int(count)
-        except ValueError:
+        except (TypeError, ValueError):
             logging.error("Invalid message received via socket: %s", msg_str)
             return
         logging.debug("Received: sig:%s, board:%s, count:%s", sig, board, count)
@@ -537,7 +537,7 @@ class Daemon(object):
             if content:
                 logging.debug("Received content: %s", content)
                 self.update_board(board, content)
-            elif count:
+            else:
                 logging.debug("Sending requested selection(s): %s",
                               self.boards[board][-count:])
                 # Send list (reversed) as json to preserve structure
