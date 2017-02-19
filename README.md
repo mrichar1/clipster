@@ -85,6 +85,7 @@ optional arguments:
                         argument given, deletes last item.
   -n NUMBER, --number NUMBER
                         Number of lines to output: defaults to 1 (See -o).
+                        0 returns entire history.
   -0, --nul             Use NUL character as output delimiter.
 
   -m DELIM, --delim DELIM

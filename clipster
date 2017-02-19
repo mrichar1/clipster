@@ -697,7 +697,7 @@ def parse_args(default_conf_file):
                            help="Delete from clipboard. Deletes matching text, or if no argument given, deletes last item.")
 
     parser.add_argument('-n', '--number', action="store", type=int, default=1,
-                        help="Number of lines to output: defaults to 1 (See -o).")
+                        help="Number of lines to output: defaults to 1 (See -o). 0 returns entire history.")
     # --delim must come before -0 to ensure delim is set correctly
     # otherwise if neither arg is passed, delim=None
     parser.add_argument('-m', '--delim', action="store", default='\n',
