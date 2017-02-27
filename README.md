@@ -123,7 +123,7 @@ sync_selections = no
 # Maximum file size is: 'history_size * max_input * 2' (defaults: 10MB)
 history_file = %(data_dir)s/history
 
-# Number of items to save in the history file for each selection.
+# Number of items to save in the history file for each selection. 0 - don't save history.
 history_size = 200
 
 # Time in seconds to flush history to disk, if changed
