@@ -99,6 +99,8 @@ class Client(object):
 
         logging.debug("Connecting to server to update.")
         with closing(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)) as sock:
+            # pylint doesn't like contextlib.closing (https://github.com/PyCQA/astroid/issues/347)
+            # pylint:disable=no-member
             try:
                 sock.connect(self.config.get('clipster', "socket_file"))
             except socket.error:
@@ -133,6 +135,8 @@ class Client(object):
 
         logging.debug("Connecting to server to query history.")
         with closing(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)) as sock:
+            # pylint doesn't like contextlib.closing (https://github.com/PyCQA/astroid/issues/347)
+            # pylint:disable=no-member
             try:
                 sock.connect(self.config.get('clipster', "socket_file"))
             except socket.error:
