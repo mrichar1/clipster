@@ -268,6 +268,34 @@ For example, to ignore keepass2, emacs and firefox, add the following list to yo
 filter_classes = KeePass2,Emacs24,Firefox
 ```
 
+## Client/Server Protocol
+
+(For developers). The protocol for communication between client and server is fairly simple.  It consists of 3 mandatory, and one optional field:
+
+`ACTION:BOARD:COUNT[:CONTENT]`
+
+* `ACTION`: An action for the server to perform. One of `BOARD`, `DELETE`, `SELECT`.
+* `BOARD`: The X selection to use. One of `PRIMARY` or `CLIPBOARD`.
+* `COUNT`: A number used for actions where counts are important.
+* `CONTENT`: (Optional) Content specific to each action.
+
+Note: The final `:` separator is only included when content is present.
+
+### Action: BOARD
+
+This is the default action.
+If content is none, return clipboard history (using count to determine the number of items to return).
+If content is defined, add its value to the clipboard.
+
+### Action: DELETE
+
+Deletes an item from the clipboard.
+If content is defined, delete by pattern match. Else delete the last item on the board.
+
+### Action: SELECT
+
+Launch the clipboard selection UI window.
+
 
 ## Bugs & Improvements
 
