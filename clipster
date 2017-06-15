@@ -108,17 +108,21 @@ class Client(object):
             logging.debug("Sending request to server.")
             # Fix for http://bugs.python.org/issue1633941 in py 2.x
             # Send message 'header' - count is 0 (i.e to be ignored)
-            sock.sendall("{0}:{1}:0:".format(self.client_action,
+            sock.sendall("{0}:{1}:0".format(self.client_action,
                                              self.config.get('clipster',
                                                              'default_selection')).encode('utf-8'))
 
             if self.client_action == "DELETE":
                 # Send delete args
-                sock.sendall(self.args.delete.encode('utf-8'))
+                sock.sendall(":{0}".format(self.args.delete).encode('utf-8'))
 
             if self.client_action == "BOARD":
                 # Send data read from stdin
                 buf_size = 8192
+                # Send another colon to show that content is coming
+                # Needed to distinguish empty content from no content
+                # e.g. when stdin is empty
+                sock.sendall(":".encode('utf-8'))
                 while True:
                     if sys.stdin.isatty():
                         recv = sys.stdin.readline(buf_size)
@@ -128,7 +132,7 @@ class Client(object):
                         break
                     if hasattr(recv, 'decode'):
                         recv = recv.decode('utf-8')
-                    sock.sendall(recv.encode('utf-8'))
+                    sock.sendall("{0}".format(recv).encode('utf-8'))
 
     def output(self):
         """Send a signal and count to daemon socket requesting items from history."""
@@ -143,7 +147,7 @@ class Client(object):
                 raise ClipsterError("Error connecting to socket. Is daemon running?")
             logging.debug("Sending request to server.")
             # Send message 'header'
-            sock.sendall("{0}:{1}:{2}:".format(self.client_action,
+            sock.sendall("{0}:{1}:{2}".format(self.client_action,
                                                self.config.get('clipster',
                                                                'default_selection'),
                                                self.args.number).encode('utf-8'))
@@ -529,7 +533,14 @@ class Daemon(object):
         except KeyError:
             return
         try:
-            sig, board, count, content = msg_str.split(':', 3)
+            msg_parts = msg_str.split(':', 3)
+            if len(msg_parts) == 4:
+                sig, board, count, content = msg_parts
+            elif len(msg_parts) == 3:
+                sig, board, count = msg_parts
+                content = None
+            else:
+                raise ValueError()
             count = int(count)
         except (TypeError, ValueError):
             logging.error("Invalid message received via socket: %s", msg_str)
@@ -538,7 +549,7 @@ class Daemon(object):
         if sig == "SELECT":
             self.selection_widget(board)
         elif sig == "BOARD":
-            if content:
+            if content is not None:
                 logging.debug("Received content: %s", content)
                 self.update_board(board, content)
             else:

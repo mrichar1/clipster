@@ -111,7 +111,7 @@ class ClientTestCase(unittest.TestCase):
         # Get a handle to the sock object returned by the mocked socket.socket
         sock = mock_socket.return_value
         self.assertTrue(mock.call.connect(os.path.join(self.data_dir, socket_file)) in sock.mock_calls)
-        self.assertTrue(mock.call.sendall('{}:{}:0:'.format(client_action, board).encode('utf-8')) in sock.mock_calls)
+        self.assertTrue(mock.call.sendall('{}:{}:0'.format(client_action, board).encode('utf-8')) in sock.mock_calls)
 
     @mock.patch('clipster.socket.socket')
     def test_client_output(self, mock_socket):
@@ -133,7 +133,7 @@ class ClientTestCase(unittest.TestCase):
         output = client.output()
 
         self.assertTrue(mock.call.connect(os.path.join(self.data_dir, socket_file)) in sock.mock_calls)
-        self.assertTrue(mock.call.sendall('{}:{}:{}:'.format(client_action, board, count).encode('utf-8')) in sock.mock_calls)
+        self.assertTrue(mock.call.sendall('{}:{}:{}'.format(client_action, board, count).encode('utf-8')) in sock.mock_calls)
         self.assertTrue(mock.call.shutdown(mock.ANY) in sock.mock_calls)
         self.assertTrue(mock.call.recv(mock.ANY) in sock.mock_calls)
         self.assertTrue(mock.call.close() in sock.mock_calls)
@@ -345,7 +345,7 @@ class DaemonTestCase(unittest.TestCase):
         action = 'BOARD'
         board = 'PRIMARY'
         count = 1
-        self.daemon.client_msgs = {1: '{}:{}:{}:'.format(action, board, count)}
+        self.daemon.client_msgs = {1: '{}:{}:{}'.format(action, board, count)}
         self.daemon.process_msg(conn)
         args, kwargs = conn.sendall.call_args
         msg_list = json.loads(args[0].decode('utf-8'))
@@ -364,7 +364,7 @@ class DaemonTestCase(unittest.TestCase):
         board = 'PRIMARY'
         board_length = len(self.history[board])
         count = 1
-        self.daemon.client_msgs = {1: '{}:{}:{}:'.format(action, board, count)}
+        self.daemon.client_msgs = {1: '{}:{}:{}'.format(action, board, count)}
         self.daemon.process_msg(conn)
         # Board should be one item less
         self.assertEqual(board_length - len(self.history[board]), 1)
