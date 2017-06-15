@@ -103,7 +103,7 @@ class Client(object):
             # pylint:disable=no-member
             try:
                 sock.connect(self.config.get('clipster', "socket_file"))
-            except socket.error:
+            except (socket.error, OSError):
                 raise ClipsterError("Error connecting to socket. Is daemon running?")
             logging.debug("Sending request to server.")
             # Fix for http://bugs.python.org/issue1633941 in py 2.x
@@ -514,7 +514,8 @@ class Daemon(object):
             else:
                 return True
         except socket.error as exc:
-            logging.debug("Socket error %s", exc)
+            logging.error("Socket error %s", exc)
+            logging.debug("Exception:", exc_info=True)
 
         conn.close()
         # Return false to remove conn from GObject.io_add_watch list
@@ -544,7 +545,11 @@ class Daemon(object):
                 logging.debug("Sending requested selection(s): %s",
                               self.boards[board][-count:])
                 # Send list (reversed) as json to preserve structure
-                conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
+                try:
+                    conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
+                except (socket.error, OSError) as exc:
+                    logging.error("Socket error %s", exc)
+                    logging.debug("Exception:", exc_info=True)
         elif sig == "IGNORE":
             self.ignore_next[board] = True
         elif sig == "DELETE":
