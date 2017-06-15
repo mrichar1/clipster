@@ -109,8 +109,8 @@ class Client(object):
             # Fix for http://bugs.python.org/issue1633941 in py 2.x
             # Send message 'header' - count is 0 (i.e to be ignored)
             sock.sendall("{0}:{1}:0".format(self.client_action,
-                                             self.config.get('clipster',
-                                                             'default_selection')).encode('utf-8'))
+                                            self.config.get('clipster',
+                                                            'default_selection')).encode('utf-8'))
 
             if self.client_action == "DELETE":
                 # Send delete args
@@ -148,9 +148,9 @@ class Client(object):
             logging.debug("Sending request to server.")
             # Send message 'header'
             sock.sendall("{0}:{1}:{2}".format(self.client_action,
-                                               self.config.get('clipster',
-                                                               'default_selection'),
-                                               self.args.number).encode('utf-8'))
+                                              self.config.get('clipster',
+                                                              'default_selection'),
+                                              self.args.number).encode('utf-8'))
 
             sock.shutdown(socket.SHUT_WR)
             data = []
