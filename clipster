@@ -509,17 +509,16 @@ class Daemon(object):
             recv = safe_decode(conn.recv(min(8192, max_input - recv_total)))
             self.client_msgs[conn.fileno()].append(recv)
             recv_total += len(recv)
+            if not recv or recv_total >= max_input:
+                self.process_msg(conn)
+            else:
+                return True
         except socket.error as exc:
             logging.debug("Socket error %s", exc)
-            conn.close()
-            # Return false to remove conn from GObject.io_add_watch list
-            return False
-        if not recv or recv_total >= max_input:
-            self.process_msg(conn)
-            conn.close()
-            # Return false to remove conn from GObject.io_add_watch list
-            return False
-        return True
+
+        conn.close()
+        # Return false to remove conn from GObject.io_add_watch list
+        return False
 
     def process_msg(self, conn):
         """Process message received from client, sending reply if required."""
