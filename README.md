@@ -105,48 +105,48 @@ You can create a config file containing only some of the options, and the rest w
 ```
 [clipster]
 # Directory for clipster data/files (usually `$HOME/.local/share/clipster`)
-data_dir = $XDG_DATA_HOME
+#data_dir = /tmp/clipster
 
 # Default selection (if no -p of -c given on command-line): can be PRIMARY or CLIPBOARD
-default_selection = PRIMARY
+#default_selection = PRIMARY
 
 # Comma-separated list of selections to be watched and written to history
-active_selections = PRIMARY,CLIPBOARD
+#active_selections = PRIMARY,CLIPBOARD
 
 # Enable synchronising of clipboards
 # Only clipboards listed in 'active selections' will be synchronised
-sync_selections = no
+#sync_selections = no
 
 # full path to the clipster history file (JSON)
 # Maximum file size is: 'history_size * max_input * 2' (defaults: 10MB)
-history_file = %(data_dir)s/history
+#history_file = %(data_dir)s/history
 
 # Number of items to save in the history file for each selection. 0 - don't save history.
-history_size = 200
+#history_size = 200
 
 # Time in seconds to flush history to disk, if changed
 # Set to 0 to only write history file on (clean) exit
-history_update_interval = 60
+#history_update_interval = 60
 
 # Write history file immediately after selection changes?
 # If yes, disables history_update_interval
-write_on_change = no
+#write_on_change = no
 
 # Full path to the clipster socket file
-socket_file = %(data_dir)s/clipster_sock
+#socket_file = %(data_dir)s/clipster_sock
 
 # Full path to the clipster pid file
-pid_file = %(data_dir)s/clipster.pid
+#pid_file = %(data_dir)s/clipster.pid
 
 # Maximum length for new clipboard items
-max_input = 50000
+#max_input = 50000
 
 # Number of rows of clipboard content to show in the selection widget before truncating
 # Set to a high number to avoid truncation
-row_height = 3
+#row_height = 3
 
 # Allow duplicates in the clipboard (if set to no, the earlier entry will be removed)
-duplicates = no
+#duplicates = no
 
 # smart_update tries to be clever about small changes to the selection, and only adds
 # to the history if the number of characters added or removed is greater than it's value.
@@ -155,20 +155,20 @@ duplicates = no
 # Defaults to 1, as some applications update the clipboard by continually adding new
 # items with a single character added or removed each time.
 # Set to 0 to disable.
-smart_update = 1
+#smart_update = 1
 
 # Extract uris from the selection text and add them to the default clipboard
-extract_uris = yes
+#extract_uris = yes
 
 # Extract emails from the selection text and add them to the default clipboard
-extract_emails = yes
+#extract_emails = yes
 
 # Extract patterns (as specified in patterns file: clipster_dir/patterns) and add them to the default clipboard
-extract_patterns = no
+#extract_patterns = no
 
 # Comma-separated list of WM_CLASS properties for apps where clipboard changes should be ignored.
 # Used to ignore clipboard changes from sensitive apps, e.g. password managers.
-filter_classes = ""
+#filter_classes = ""
 
 ```
 
