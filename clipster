@@ -474,22 +474,20 @@ class Daemon(object):
             last_item = self.boards[selection][-1]
         except IndexError:
             last_item = ""
-        # First item in tuple is bool, False if clipboard is empty
-        # Would use event.reason, but many apps don't set this properly.
-        if not board.wait_for_targets()[0]:
-            if last_item:
-                logging.debug("Clipboard cleared. Reinstating from history.")
-                self.update_board(selection, self.boards[selection][-1])
-        elif board.wait_is_text_available():
+        # Try to get text from clipboard
+        text = board.wait_for_text()
+        if text:
             logging.debug("Selection is text.")
-            text = self.read_board(selection)
-            if text:
-                self.update_history(selection, text)
-            elif last_item:
-                logging.debug("Selection empty. Reinstating from history.")
-                self.update_board(selection, last_item)
+            self.update_history(selection, text)
+            # If no text received, either the selection was an empty string,
+            # or the board contains non-text content.
         else:
-            logging.debug("Selection is not text - ignoring.")
+            # First item in tuple is bool, False if no targets
+            if board.wait_for_targets()[0]:
+                logging.debug("Selection is not text - ignoring.")
+            else:
+                logging.debug("Clipboard cleared or empty. Reinstating from history.")
+                self.update_board(selection, self.boards[selection][-1])
 
         # Unblock event handling
         board.handler_unblock(event_id)
