@@ -20,7 +20,7 @@ setup(
     long_description=__doc__,
     packages=find_packages(exclude=['tests']),
     include_package_data=True,
-    data_files = [("share/doc/clipster", ["LICENSE.md", "README.md"])],
+    data_files = [("share/licenses/clipster", ["LICENSE.md"]), ("share/doc/clipster", ["README.md"])],
     zip_safe=False,
     platforms='any',
     install_requires=dependencies,
