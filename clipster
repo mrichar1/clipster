@@ -130,8 +130,7 @@ class Client(object):
                         recv = sys.stdin.read(buf_size)
                     if not recv:
                         break
-                    if hasattr(recv, 'decode'):
-                        recv = recv.decode('utf-8')
+                    recv = safe_decode(recv)
                     sock.sendall("{0}".format(recv).encode('utf-8'))
 
     def output(self):
@@ -160,7 +159,7 @@ class Client(object):
                     logging.debug("Received data from server.")
                     if not recv:
                         break
-                    data.append(recv.decode('utf-8'))
+                    data.append(safe_decode(recv))
                 except socket.error:
                     break
         if data:
