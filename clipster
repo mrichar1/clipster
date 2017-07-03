@@ -212,6 +212,7 @@ class Daemon(object):
         for tree in treepaths:
             treeiter = model.get_iter(tree)
             item = model[treeiter][1]
+            item = safe_decode(item)
             logging.debug("Deleting history entry: %s", item)
             # If deleted item is currently on the clipboard, clear it
             if self.read_board(board) == item:
