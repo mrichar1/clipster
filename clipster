@@ -463,11 +463,6 @@ class Daemon(object):
                     pass
             break
 
-        # Read clipboard
-        try:
-            last_item = self.boards[selection][-1]
-        except IndexError:
-            last_item = ""
         # Try to get text from clipboard
         text = board.wait_for_text()
         if text:
