@@ -1,6 +1,7 @@
 language: python
 sudo: required
 dist: trusty
+group: deprecated-2017Q2
 cache:
   - apt
   - directories:
