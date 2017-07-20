@@ -280,7 +280,7 @@ class DaemonTestCase(unittest.TestCase):
         """Test that the max_input limit works."""
 
         max_input = self.config.getint('clipster', 'max_input')
-        header = "BOARD:PRIMARY:0:"
+        header = "SEND:PRIMARY:0:"
         # Set the text to be the same length as max_input
         # so that total length (plus header) exceeds it.
         text = "x" * max_input
@@ -324,7 +324,7 @@ class DaemonTestCase(unittest.TestCase):
         conn = mock.MagicMock()
         conn.fileno.return_value = 1
 
-        action = 'BOARD'
+        action = 'SEND'
         board = 'PRIMARY'
         count = '0'
         msg = 'Hello world\n'

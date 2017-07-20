@@ -91,7 +91,7 @@ class Client(object):
     def __init__(self, config, args):
         self.config = config
         self.args = args
-        self.client_action = args.select and "SELECT" or (args.ignore and "IGNORE" or args.delete is not None and "DELETE" or "BOARD")
+        self.client_action = args.select and "SELECT" or (args.ignore and "IGNORE" or args.delete is not None and "DELETE" or args.search is not None and "BOARD" or args.output is not None and "BOARD" or "SEND")
         logging.debug("client_action: %s", self.client_action)
 
     def update(self):
@@ -116,7 +116,7 @@ class Client(object):
                 # Send delete args
                 sock.sendall(":{0}".format(self.args.delete).encode('utf-8'))
 
-            if self.client_action == "BOARD":
+            if self.client_action == "SEND":
                 # Send data read from stdin
                 buf_size = 8192
                 # Send another colon to show that content is coming
@@ -146,10 +146,13 @@ class Client(object):
                 raise ClipsterError("Error connecting to socket. Is daemon running?")
             logging.debug("Sending request to server.")
             # Send message 'header'
-            sock.sendall("{0}:{1}:{2}".format(self.client_action,
-                                              self.config.get('clipster',
-                                                              'default_selection'),
-                                              self.args.number).encode('utf-8'))
+            message = "{0}:{1}:{2}".format(self.client_action,
+                                           self.config.get('clipster',
+                                                           'default_selection'),
+                                           self.args.number)
+            if self.args.search:
+                message = "{0}:{1}".format(message, self.args.search)
+            sock.sendall(message.encode('utf-8'))
 
             sock.shutdown(socket.SHUT_WR)
             data = []
@@ -535,19 +538,24 @@ class Daemon(object):
         logging.debug("Received: sig:%s, board:%s, count:%s", sig, board, count)
         if sig == "SELECT":
             self.selection_widget(board)
-        elif sig == "BOARD":
+        elif sig == "SEND":
             if content is not None:
                 logging.debug("Received content: %s", content)
                 self.update_board(board, content)
             else:
-                logging.debug("Sending requested selection(s): %s",
-                              self.boards[board][-count:])
-                # Send list (reversed) as json to preserve structure
-                try:
-                    conn.sendall(json.dumps(self.boards[board][-count:][::-1]).encode('utf-8'))
-                except (socket.error, OSError) as exc:
-                    logging.error("Socket error %s", exc)
-                    logging.debug("Exception:", exc_info=True)
+                raise ClipsterError("No content received!")
+        elif sig == "BOARD":
+            result = self.boards[board]
+            if content:
+                logging.debug("Searching for pattern: %s", content)
+                result = [x for x in self.boards[board] if re.search(content, x)]
+            logging.debug("Sending requested selection(s): %s", result[-count:][::-1])
+            # Send list (reversed) as json to preserve structure
+            try:
+                conn.sendall(json.dumps(result[-count:][::-1]).encode('utf-8'))
+            except (socket.error, OSError) as exc:
+                logging.error("Socket error %s", exc)
+                logging.debug("Exception:", exc_info=True)
         elif sig == "IGNORE":
             self.ignore_next[board] = True
         elif sig == "DELETE":
@@ -695,7 +703,7 @@ def parse_args(default_conf_file):
     actiongrp.add_argument('-s', '--select', action="store_true",
                            help="Launch the clipboard history selection window.")
     actiongrp.add_argument('-o', '--output', action="store_true",
-                           help="Output last selection from history. (See -n).")
+                           help="Output selection from history. (See -n and -S).")
     actiongrp.add_argument('-i', '--ignore', action="store_true",
                            help="Instruct daemon to ignore next update to clipboard.")
     actiongrp.add_argument('-r', '--delete', action="store", nargs='?', const='',
@@ -703,6 +711,10 @@ def parse_args(default_conf_file):
 
     parser.add_argument('-n', '--number', action="store", type=int, default=1,
                         help="Number of lines to output: defaults to 1 (See -o). 0 returns entire history.")
+
+    parser.add_argument('-S', '--search', action="store",
+                        help="Pattern to match for output.")
+
     # --delim must come before -0 to ensure delim is set correctly
     # otherwise if neither arg is passed, delim=None
     parser.add_argument('-m', '--delim', action="store", default='\n',

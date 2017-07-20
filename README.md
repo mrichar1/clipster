@@ -76,7 +76,7 @@ optional arguments:
   -c, --clipboard       Query, or write STDIN to, the CLIPBOARD clipboard.
   -d, --daemon          Launch the daemon.
   -s, --select          Launch the clipboard history selection window.
-  -o, --output          Output last selection from history. (See -n).
+  -o, --output          Output last selection from history. (See -n and -S).
   -i, --ignore          Instruct daemon to ignore next update to clipboard.
   -r [DELETE], --delete [DELETE]
                         Delete from clipboard. Deletes matching text, or if no
@@ -84,8 +84,9 @@ optional arguments:
   -n NUMBER, --number NUMBER
                         Number of lines to output: defaults to 1 (See -o).
                         0 returns entire history.
+  -S SEARCH, --search SEARCH
+                        Pattern to match for output.
   -0, --nul             Use NUL character as output delimiter.
-
   -m DELIM, --delim DELIM
                         String to use as output delimiter (defaults to '\n')
 ```
@@ -290,13 +291,17 @@ Note: The final `:` separator is only included when content is present.
 ### Action: BOARD
 
 This is the default action.
-If content is none, return clipboard history (using count to determine the number of items to return).
-If content is defined, add its value to the clipboard.
+Return clipboard history (using count to determine the number of items to return).
+If CONTENT is defined, use this as a regex pattern to filter history.
+
+### Action: SEND
+
+Add the value of CONTENT to the clipboard.
 
 ### Action: DELETE
 
 Deletes an item from the clipboard.
-If content is defined, delete by pattern match. Else delete the last item on the board.
+If CONTENT is defined, delete by pattern match. Else delete the last item on the board.
 
 ### Action: SELECT
 
