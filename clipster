@@ -380,6 +380,14 @@ class Daemon(object):
                 logging.debug("smart-update: removing.")
                 # new selection is a longer/shorter version of previous
                 self.boards[board].pop()
+
+        if self.config.getboolean('clipster', 'extract_uris'):
+            # Simple uri regex
+            self.patterns.append(r'\b\S+://\S+\b')
+        if self.config.getboolean('clipster', 'extract_emails'):
+            # Simple email regex
+            self.patterns.append(r'\b\S+\@\S+\.\S+\b')
+
         for pattern in self.patterns:
             try:
                 for match in set(re.findall(pattern, text)):
@@ -390,27 +398,6 @@ class Daemon(object):
                         self.boards[board].append(match)
             except re.error as exc:
                 logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.args[0])
-
-        if self.config.getboolean('clipster', 'extract_uris'):
-            # Simple uri regex
-            url_re = r'\b\S+://\S+\b'
-            for url in set(re.findall(url_re, text)):
-                if url != text:
-                    logging.debug("URL found: %s", url)
-                    if not self.config.getboolean('clipster', 'duplicates'):
-                        self.remove_history(board, url)
-                    self.boards[board].append(url)
-        if self.config.getboolean('clipster', 'extract_emails'):
-            # Simple email regex
-            mail_re = r'\b\S+\@\S+\.\S+\b'
-            for email in set(re.findall(mail_re, text)):
-                # Skip urls with auth info that look a bit like emails
-                # e.g. http://bob:passwd@example.com
-                if ':' not in email and email != text:
-                    logging.debug("Email found: %s", email)
-                    if not self.config.getboolean('clipster', 'duplicates'):
-                        self.remove_history(board, email)
-                    self.boards[board].append(email)
 
         self.boards[board].append(text)
         # Flag that the history file needs updating
