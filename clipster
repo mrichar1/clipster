@@ -19,7 +19,7 @@ import stat
 from contextlib import closing
 from gi import require_version
 require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk, GLib, GObject
+from gi.repository import Gtk, Gdk, GLib, GObject  # pylint:disable=wrong-import-position
 try:
     require_version("Wnck", "3.0")
     from gi.repository import Wnck
