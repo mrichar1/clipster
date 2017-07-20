@@ -383,10 +383,13 @@ class Daemon(object):
 
         if self.config.getboolean('clipster', 'extract_uris'):
             # Simple uri regex
-            self.patterns.append(r'\b\S+://\S+\b')
+            self.patterns.insert(0, r'\b\S+://\S+\b')
         if self.config.getboolean('clipster', 'extract_emails'):
             # Simple email regex
-            self.patterns.append(r'\b\S+\@\S+\.\S+\b')
+            self.patterns.insert(0, r'\b\S+\@\S+\.\S+\b')
+
+        # Insert selection into history before pattern matching
+        self.boards[board].append(text)
 
         for pattern in self.patterns:
             try:
@@ -395,11 +398,15 @@ class Daemon(object):
                         logging.debug("Pattern '%s' matched in: %s", pattern, text)
                         if not self.config.getboolean('clipster', 'duplicates'):
                             self.remove_history(board, match)
-                        self.boards[board].append(match)
+                        if self.config.getboolean('clipster', 'pattern_as_selection'):
+                            self.ignore_next[board] = True
+                            self.update_board(board, match)
+                            self.boards[board].append(match)
+                        else:
+                            self.boards[board].insert(-1, match)
             except re.error as exc:
                 logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.args[0])
 
-        self.boards[board].append(text)
         # Flag that the history file needs updating
         self.update_history_file = True
         if self.config.getboolean('clipster', 'write_on_change'):
@@ -732,6 +739,7 @@ def parse_config(args, data_dir):
                        "extract_uris": "yes",  # Extract URIs within selection text
                        "extract_emails": "yes",  # Extract emails within selection text
                        "extract_patterns": "no",  # Extract patterns based on regexes stored in data_dir/patterns (one per line).
+                       "pattern_as_selection": "no",  # Extracted pattern should replace current selection.
                        "filter_classes": ""}  # Comma-separated list of WM_CLASS to identify apps from which to ignore owner-change events
 
     config = configparser.SafeConfigParser(config_defaults)

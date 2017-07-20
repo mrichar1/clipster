@@ -166,6 +166,12 @@ You can create a config file containing only some of the options, and the rest w
 # Extract patterns (as specified in patterns file: clipster_dir/patterns) and add them to the default clipboard
 #extract_patterns = no
 
+# Extracted patterns are added to the history before the selection, and the clipbaord buffer is left unchanged.
+# Enabling this option adds the pattern as the last item int he history, and updates the clipboard buffer with the pattern.
+# NOTE: Multiple patterns will be applied sequentially: last one will be used for selection.
+# This option also applies to email and uri patterns (which are processed before additional patterns).
+#pattern_as_selection = no
+
 # Comma-separated list of WM_CLASS properties for apps where clipboard changes should be ignored.
 # Used to ignore clipboard changes from sensitive apps, e.g. password managers.
 #filter_classes = ""
