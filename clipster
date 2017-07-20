@@ -405,7 +405,7 @@ class Daemon(object):
                         else:
                             self.boards[board].insert(-1, match)
             except re.error as exc:
-                logging.warn("Skipping invalid pattern '%s': %s", pattern, exc.args[0])
+                logging.warning("Skipping invalid pattern '%s': %s", pattern, exc.args[0])
 
         # Flag that the history file needs updating
         self.update_history_file = True
@@ -622,7 +622,7 @@ class Daemon(object):
                     logging.debug("Loaded patterns: %s", ','.join(self.patterns))
 
             except FileNotFoundError as exc:
-                logging.warn("Unable to read patterns file: %s %s", patfile, exc.strerror)
+                logging.warning("Unable to read patterns file: %s %s", patfile, exc.strerror)
 
     def exit(self):
         """Clean up things before exiting."""
