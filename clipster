@@ -91,7 +91,15 @@ class Client(object):
     def __init__(self, config, args):
         self.config = config
         self.args = args
-        self.client_action = args.select and "SELECT" or (args.ignore and "IGNORE" or args.delete is not None and "DELETE" or args.search is not None and "BOARD" or args.output is not None and "BOARD" or "SEND")
+        self.client_action = "SEND"
+        if args.select:
+            self.client_action = "SELECT"
+        elif args.ignore:
+            self.client_action = "IGNORE"
+        elif args.delete:
+            self.client_action = "DELETE"
+        elif args.output or args.search:
+            self.client_action = "BOARD"
         logging.debug("client_action: %s", self.client_action)
 
     def update(self):
