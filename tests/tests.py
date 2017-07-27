@@ -352,7 +352,7 @@ class DaemonTestCase(unittest.TestCase):
         self.assertListEqual(self.history[board][-count:], msg_list)
 
     def test_process_msg_delete_last(self):
-        """Process a client message to output a board's contents."""
+        """Process a client message to delete the last item from a board."""
 
         # Set up a mock of some of a socket connection object
         conn = mock.MagicMock()
@@ -370,7 +370,7 @@ class DaemonTestCase(unittest.TestCase):
         self.assertEqual(board_length - len(self.history[board]), 1)
 
     def test_process_msg_delete_pattern_match(self):
-        """Process a client message to output a board's contents."""
+        """Process a client message to delete a specific item from a board."""
 
         # Set up a mock of some of a socket connection object
         conn = mock.MagicMock()
@@ -389,7 +389,7 @@ class DaemonTestCase(unittest.TestCase):
         self.assertEqual(board_length - len(self.history[board]), 1)
 
     def test_process_msg_delete_pattern_no_match(self):
-        """Process a client message to output a board's contents."""
+        """Process a client message to delete a nonexistent item from a board."""
 
         # Set up a mock of some of a socket connection object
         conn = mock.MagicMock()
@@ -407,6 +407,22 @@ class DaemonTestCase(unittest.TestCase):
         # Board should be one item less
         self.assertEqual(board_length, len(self.history[board]))
 
+    def test_process_msg_erase(self):
+        """Process a client message to erase a board's contents."""
+
+        # Set up a mock of some of a socket connection object
+        conn = mock.MagicMock()
+        conn.fileno.return_value = 1
+        conn.sendall.return_value = True
+        self.daemon.boards = self.history
+
+        action = 'ERASE'
+        board = 'PRIMARY'
+        count = 1
+        self.daemon.client_msgs = {1: '{}:{}:{}'.format(action, board, count)}
+        self.daemon.process_msg(conn)
+        # Board should be empty
+        self.assertEqual(len(self.history[board]), 0)
 
 if __name__ == "__main__":
     unittest.main()
