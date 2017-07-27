@@ -81,6 +81,7 @@ optional arguments:
   -r [DELETE], --delete [DELETE]
                         Delete from clipboard. Deletes matching text, or if no
                         argument given, deletes last item.
+  --erase-entire-board  Delete all items from the clipboard.
   -n NUMBER, --number NUMBER
                         Number of lines to output: defaults to 1 (See -o).
                         0 returns entire history.
@@ -302,6 +303,10 @@ Add the value of CONTENT to the clipboard.
 
 Deletes an item from the clipboard.
 If CONTENT is defined, delete by pattern match. Else delete the last item on the board.
+
+### Action: ERASE
+
+Deletes all items from the clipboard.
 
 ### Action: SELECT
 

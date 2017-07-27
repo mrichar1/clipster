@@ -98,6 +98,8 @@ class Client(object):
             self.client_action = "IGNORE"
         elif args.delete:
             self.client_action = "DELETE"
+        elif args.erase_entire_board:
+            self.client_action = "ERASE"
         elif args.output or args.search:
             self.client_action = "BOARD"
         logging.debug("client_action: %s", self.client_action)
@@ -579,6 +581,11 @@ class Daemon(object):
                 # If deleted item is current on the clipboard, clear it
                 if self.read_board(board) == last:
                     self.update_board(board)
+        elif sig == "ERASE":
+            logging.debug("Erasing clipboard (%d items)", len(self.boards[board]))
+            self.boards[board] = []
+            self.update_board(board)
+            self.update_history_file = True
 
     def prepare_files(self):
         """Ensure that all files and sockets used
@@ -716,6 +723,8 @@ def parse_args(default_conf_file):
                            help="Instruct daemon to ignore next update to clipboard.")
     actiongrp.add_argument('-r', '--delete', action="store", nargs='?', const='',
                            help="Delete from clipboard. Deletes matching text, or if no argument given, deletes last item.")
+    actiongrp.add_argument('--erase-entire-board', action="store_true",
+                           help="Delete all items from the clipboard.")
 
     parser.add_argument('-n', '--number', action="store", type=int, default=1,
                         help="Number of lines to output: defaults to 1 (See -o). 0 returns entire history.")
