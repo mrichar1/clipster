@@ -349,16 +349,13 @@ class Daemon(object):
 
         return safe_decode(getattr(self, board.lower()).wait_for_text())
 
-    def update_board(self, board, data=None):
+    def update_board(self, board, data=""):
         """Update a clipboard. Will trigger an owner-change event."""
 
         selection = getattr(self, board.lower())
-        if data:
-            selection.set_text(data, -1)
-        else:
-            selection.set_text("", 0)
+        selection.set_text(data, -1)
+        if not data:
             selection.clear()
-
 
     def remove_history(self, board, text):
         """If text exists in the history, remove it."""
