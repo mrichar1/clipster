@@ -96,11 +96,11 @@ class Client(object):
             self.client_action = "SELECT"
         elif args.ignore:
             self.client_action = "IGNORE"
-        elif args.delete:
+        elif args.delete is not None:
             self.client_action = "DELETE"
         elif args.erase_entire_board:
             self.client_action = "ERASE"
-        elif args.output or args.search:
+        elif args.output or args.search is not None:
             self.client_action = "BOARD"
         logging.debug("client_action: %s", self.client_action)
 
