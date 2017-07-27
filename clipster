@@ -349,10 +349,16 @@ class Daemon(object):
 
         return safe_decode(getattr(self, board.lower()).wait_for_text())
 
-    def update_board(self, board, data=""):
+    def update_board(self, board, data=None):
         """Update a clipboard. Will trigger an owner-change event."""
 
-        getattr(self, board.lower()).set_text(data, -1)
+        selection = getattr(self, board.lower())
+        if data:
+            selection.set_text(data, -1)
+        else:
+            selection.set_text("", 0)
+            selection.clear()
+
 
     def remove_history(self, board, text):
         """If text exists in the history, remove it."""
@@ -487,7 +493,10 @@ class Daemon(object):
                 logging.debug("Selection is not text - ignoring.")
             else:
                 logging.debug("Clipboard cleared or empty. Reinstating from history.")
-                self.update_board(selection, self.boards[selection][-1])
+                if self.boards[selection]:
+                    self.update_board(selection, self.boards[selection][-1])
+                else:
+                    logging.debug("No history available, leaving clipboard empty.")
 
         # Unblock event handling
         board.handler_unblock(event_id)
