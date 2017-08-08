@@ -141,7 +141,7 @@ class Client(object):
                     if not recv:
                         break
                     recv = safe_decode(recv)
-                    sock.sendall("{0}".format(recv).encode('utf-8'))
+                    sock.sendall(recv.encode('utf-8'))
 
     def output(self):
         """Send a signal and count to daemon socket requesting items from history."""
