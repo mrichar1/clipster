@@ -834,7 +834,7 @@ def main():
 
         if args.output:
             # Ask server for clipboard history
-            print(client.output(), end='')
+            print(client.output().encode('utf-8'), end='')
         else:
             # Read from stdin and send to server
             client.update()
