@@ -1,12 +1,6 @@
 language: python
-sudo: required
+sudo: false
 dist: trusty
-group: deprecated-2017Q2
-cache:
-  - apt
-  - directories:
-    - "$HOME/.cache/pip"
-    - "$HOME/.pyenv"
 python:
   - 2.7
   - 3.4
