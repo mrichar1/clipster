@@ -35,9 +35,11 @@ Clipster was designed to try to add a good selection of useful features, while a
 
 * Option to ignore clipboard updates form certain applications. (`filter_classes`)
 
-* Ability to delete items in clipboard history from GUI or command-line.
+* Ability to delete items in clipboard history from GUI or command-line. (`--delete`, `--erase-entire-board`)
 
-* One-off command to ignore next clipboard selection.
+* Ability to ignore selections based on a list of regex patterns. (`ignore_patterns`)
+
+* One-off command to ignore next clipboard selection. (`--ignore`)
 
 
 New feature requests always welcome! See `Bugs & Improvements` at the end of this document.
@@ -97,7 +99,7 @@ optional arguments:
 
 Clipster (mostly) follows the XDG base-dir spec: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
-Clipster looks for its configuration file `clipster.ini` in ``$XDG_CONFIG_HOME/clipster` (usually `$HOME/.config/clipster/` or `/etc/xdg/clipster/`), but this directory can be changed using the `-f` option.
+Clipster looks for its configuration file `clipster.ini` in `$XDG_CONFIG_HOME/clipster` (usually `$HOME/.config/clipster/` or `/etc/xdg/clipster/`), but this directory can be changed using the `-f` option.
 
 The config options, and their default values, are shown below. Note the `%()s` syntax can be used to re-use an existing config option's value elsewhere.
 
