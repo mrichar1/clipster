@@ -68,7 +68,7 @@ Clipster clipboard manager.
 optional arguments:
   -h, --help            show this help message and exit
   -f CONFIG, --config CONFIG
-                        Path to config file.
+                        Path to config directory.
   -l LOG_LEVEL, --log_level LOG_LEVEL
                         Set log level: DEBUG, INFO (default), WARNING, ERROR,
                         CRITICAL
@@ -97,7 +97,7 @@ optional arguments:
 
 Clipster (mostly) follows the XDG base-dir spec: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
-Clipster looks for its configuration file in $XDG_CONFIG_HOME (usually `$HOME/.config/clipster/clipster.ini` or `/etc/xdg/clipster/clipster.ini`), but this can be changed using the `-f` option.
+Clipster looks for its configuration file `clipster.ini` in ``$XDG_CONFIG_HOME/clipster` (usually `$HOME/.config/clipster/` or `/etc/xdg/clipster/`), but this directory can be changed using the `-f` option.
 
 The config options, and their default values, are shown below. Note the `%()s` syntax can be used to re-use an existing config option's value elsewhere.
 
@@ -107,7 +107,7 @@ You can create a config file containing only some of the options, and the rest w
 ```
 [clipster]
 # Directory for clipster data/files (usually `$HOME/.local/share/clipster`)
-#data_dir = /tmp/clipster
+#data_dir = $XDG_DATA_HOME
 
 # Default selection (if no -p of -c given on command-line): can be PRIMARY or CLIPBOARD
 #default_selection = PRIMARY
@@ -167,9 +167,11 @@ You can create a config file containing only some of the options, and the rest w
 
 # Extract patterns (as specified in patterns file: clipster_dir/patterns) and add them to the default clipboard
 #extract_patterns = no
+#patterns_file = %(conf_dir)s/patterns
 
 # Ignore selections matching certain patterns (as specified in patterns file: clipster_dir/ignore_patterns)
 #ignore_patterns = no
+#ignore_patterns_file = %(conf_dir)s/ignore_patterns
 
 # Extracted patterns are added to the history before the selection, and the clipbaord buffer is left unchanged.
 # Enabling this option adds the pattern as the last item int he history, and updates the clipboard buffer with the pattern.

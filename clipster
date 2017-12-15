@@ -606,7 +606,7 @@ class Daemon(object):
     def read_patt_file(self, name):
         """Get a series of regexes (one per line) from a file and return as a list."""
         try:
-            patfile = os.path.join(self.config.get('clipster', 'data_dir'), name)
+            patfile = os.path.join(self.config.get('clipster', 'conf_dir'), name)
             with open(patfile) as pat_f:
                 patts = [x.strip() for x in pat_f.read().splitlines()]
                 logging.debug("Loaded patterns: %s", ','.join(patts))
@@ -661,12 +661,12 @@ class Daemon(object):
         # Read in patterns file
         if self.config.getboolean('clipster', 'extract_patterns'):
             logging.debug("extract_patterns enabled.")
-            self.patterns = self.read_patt_file('patterns')
+            self.patterns = self.read_patt_file(self.config.get('clipster', 'extract_patterns_file'))
 
         # Read in ignore_patterns file
         if self.config.getboolean('clipster', 'ignore_patterns'):
             logging.debug("ignore_patterns enabled.")
-            self.ignore_patterns = self.read_patt_file('ignore_paterns')
+            self.ignore_patterns = self.read_patt_file(self.config.get('clipster', 'ignore_patterns_file'))
 
     def exit(self):
         """Clean up things before exiting."""
@@ -722,12 +722,12 @@ class Daemon(object):
         Gtk.main()
 
 
-def parse_args(default_conf_file):
+def parse_args():
     """Parse command-line arguments."""
 
     parser = argparse.ArgumentParser(description='Clipster clipboard manager.')
-    parser.add_argument('-f', '--config', action="store", default=default_conf_file,
-                        help="Path to config file.")
+    parser.add_argument('-f', '--config', action="store",
+                        help="Path to config directory.")
     parser.add_argument('-l', '--log_level', action="store", default="INFO",
                         help="Set log level: DEBUG, INFO (default), WARNING, ERROR, CRITICAL")
     # Mutually exclusive client and daemon options.
@@ -768,11 +768,12 @@ def parse_args(default_conf_file):
     return parser.parse_args()
 
 
-def parse_config(args, data_dir):
+def parse_config(args, data_dir, conf_dir):
     """Configuration derived from defaults & file."""
 
     # Set some config defaults
     config_defaults = {"data_dir": data_dir,  # clipster 'root' dir (see history/socket/pid file config)
+                       "conf_dir": conf_dir,  # clipster config dir (see pattern/ignore_pattern file config). Can be overridden using -f cmd-line arg.
                        "default_selection": "PRIMARY",  # PRIMARY or CLIPBOARD
                        "active_selections": "PRIMARY,CLIPBOARD",  # Comma-separated list of selections to monitor/save
                        "sync_selections": "no",  # Synchronise contents of both clipboards
@@ -789,7 +790,9 @@ def parse_config(args, data_dir):
                        "extract_uris": "yes",  # Extract URIs within selection text
                        "extract_emails": "yes",  # Extract emails within selection text
                        "extract_patterns": "no",  # Extract patterns based on regexes stored in data_dir/patterns (one per line).
+                       "extract_patterns_file": "%(conf_dir)s/patterns",  # patterns file for extract_patterns
                        "ignore_patterns": "no",  # Ignore selections which match regex patterns stored in data_dir/ignore_patterns (one per line).
+                       "ignore_patterns_file": "%(conf_dir)s/ignore_patterns",  # patterns file for ignore_patterns
                        "pattern_as_selection": "no",  # Extracted pattern should replace current selection.
                        "filter_classes": ""}  # Comma-separated list of WM_CLASS to identify apps from which to ignore owner-change events
 
@@ -798,8 +801,12 @@ def parse_config(args, data_dir):
 
     # Try to read config file (either passed in, or default value)
     if args.config:
-        logging.debug("Trying to read config file: %s", args.config)
-        config.read(args.config)
+        config.set('clipster', 'conf_dir', args.config)
+    conf_file = os.path.join(config.get('clipster', 'conf_dir'), 'clipster.ini')
+    logging.debug("Trying to read config file: %s", conf_file)
+    result = config.read(conf_file)
+    if not result:
+        logging.debug("Unable to read config file: %s", conf_file)
 
     logging.debug("Merged config: %s",
                   sorted(dict(config.items('clipster')).items()))
@@ -813,32 +820,33 @@ def find_config():
     # Set a default directory for clipster files
     # https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
     xdg_config_dirs = os.environ.get('XDG_CONFIG_DIRS', '/etc/xdg').split(':')
-    xdg_config_dirs.append(os.environ.get('XDG_CONFIG_HOME', os.path.join(os.environ.get('HOME'), ".config")))
+    xdg_config_dirs.insert(0, os.environ.get('XDG_CONFIG_HOME', os.path.join(os.environ.get('HOME'), ".config")))
     xdg_data_home = os.environ.get('XDG_DATA_HOME', os.path.join(os.environ.get('HOME'), ".local/share"))
 
     data_dir = os.path.join(xdg_data_home, "clipster")
-    # Keep trying to define conf_file, moving from global -> local
+    # Keep trying to define conf_dir, moving from local -> global
     for path in xdg_config_dirs:
-        if os.path.exists(os.path.join(path, 'clipster', "clipster.ini")):
-            return os.path.join(path, 'clipster', "clipster.ini"), data_dir
+        conf_dir = os.path.join(path, 'clipster')
+        if os.path.exists(conf_dir):
+            return conf_dir, data_dir
     return "", data_dir
 
 
 def main():
     """Start the application. Return an exit status (0 or 1)."""
 
-    # Find default config file and data dir
-    conf_file, data_dir = find_config()
+    # Find default config and data dirs
+    conf_dir, data_dir = find_config()
 
     # parse command-line arguments
-    args = parse_args(default_conf_file=conf_file)
+    args = parse_args()
 
     # Enable logging
     logging.basicConfig(format='%(levelname)s:%(message)s',
                         level=getattr(logging, args.log_level.upper()))
     logging.debug("Debugging Enabled.")
 
-    config = parse_config(args, data_dir)
+    config = parse_config(args, data_dir, conf_dir)
 
     # Launch the daemon
     if args.daemon:

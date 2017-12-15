@@ -75,11 +75,12 @@ class ClientTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Read in the config and args defaults
-        cls.args = clipster.parse_args(None)
+        cls.args = clipster.parse_args()
         # 2nd argument is the data dir - usually derived from XDG/ENV
         # Set to an explicit value for testing
         cls.data_dir = "/data_dir"
-        cls.config = clipster.parse_config(cls.args, cls.data_dir)
+        cls.conf_dir = "/conf_dir"
+        cls.config = clipster.parse_config(cls.args, cls.data_dir, cls.conf_dir)
         cls.logger = logging.getLogger()
 #        cls.logger.level = logging.DEBUG
 
@@ -154,11 +155,12 @@ class DaemonTestCase(unittest.TestCase):
 
     def setUp(self):
         # Read in the config and args defaults
-        self.args = clipster.parse_args(None)
+        self.args = clipster.parse_args()
         # 2nd argument is the data dir - usually derived from XDG/ENV
         # Set to an explicit value for testing
         self.data_dir = "/data_dir"
-        self.config = clipster.parse_config(self.args, self.data_dir)
+        self.conf_dir = "/conf_dir"
+        self.config = clipster.parse_config(self.args, self.data_dir, self.conf_dir)
 
         # Set up a fake history
         self.history = {"CLIPBOARD": ["ape", "bear\nbear", "cat\ncat\n"], "PRIMARY": ["apple", "banana\nbanana", "clementine\nclementine\n"]}
