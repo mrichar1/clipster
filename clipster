@@ -191,6 +191,7 @@ class Daemon(object):
 
         self.config = config
         self.patterns = []
+        self.ignore_patterns = []
         self.window = self.p_id = self.c_id = self.sock = None
         self.sock_file = self.config.get('clipster', 'socket_file')
         self.primary = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
@@ -370,6 +371,12 @@ class Daemon(object):
 
     def update_history(self, board, text):
         """Update the in-memory clipboard history."""
+
+        for ignore in self.ignore_patterns:
+            # If text matches an ignore pattern, don't update history
+            if re.search(ignore, text):
+                logging.debug("Pattern: '%s' matches selection: '%s' - ignoring.", ignore, text)
+                return
 
         if self.ignore_next[board]:
             # Ignore history update this time and reset ignore flag
@@ -596,6 +603,17 @@ class Daemon(object):
             self.update_board(board)
             self.update_history_file = True
 
+    def read_patt_file(self, name):
+        """Get a series of regexes (one per line) from a file and return as a list."""
+        try:
+            patfile = os.path.join(self.config.get('clipster', 'data_dir'), name)
+            with open(patfile) as pat_f:
+                patts = [x.strip() for x in pat_f.read().splitlines()]
+                logging.debug("Loaded patterns: %s", ','.join(patts))
+                return patts
+        except FileNotFoundError as exc:
+            logging.warning("Unable to read patterns file: %s %s", patfile, exc.strerror)
+
     def prepare_files(self):
         """Ensure that all files and sockets used
         by the daemon are available."""
@@ -642,14 +660,13 @@ class Daemon(object):
 
         # Read in patterns file
         if self.config.getboolean('clipster', 'extract_patterns'):
-            try:
-                patfile = os.path.join(self.config.get('clipster', 'data_dir'), 'patterns')
-                with open(patfile) as pat_f:
-                    self.patterns = [x.strip() for x in pat_f.read().splitlines()]
-                    logging.debug("Loaded patterns: %s", ','.join(self.patterns))
+            logging.debug("extract_patterns enabled.")
+            self.patterns = self.read_patt_file('patterns')
 
-            except FileNotFoundError as exc:
-                logging.warning("Unable to read patterns file: %s %s", patfile, exc.strerror)
+        # Read in ignore_patterns file
+        if self.config.getboolean('clipster', 'ignore_patterns'):
+            logging.debug("ignore_patterns enabled.")
+            self.ignore_patterns = self.read_patt_file('ignore_paterns')
 
     def exit(self):
         """Clean up things before exiting."""
@@ -772,6 +789,7 @@ def parse_config(args, data_dir):
                        "extract_uris": "yes",  # Extract URIs within selection text
                        "extract_emails": "yes",  # Extract emails within selection text
                        "extract_patterns": "no",  # Extract patterns based on regexes stored in data_dir/patterns (one per line).
+                       "ignore_patterns": "no",  # Ignore selections which match regex patterns stored in data_dir/ignore_patterns (one per line).
                        "pattern_as_selection": "no",  # Extracted pattern should replace current selection.
                        "filter_classes": ""}  # Comma-separated list of WM_CLASS to identify apps from which to ignore owner-change events
 

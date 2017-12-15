@@ -175,6 +175,16 @@ class DaemonTestCase(unittest.TestCase):
             self.daemon.read_history_file()
         self.assertEqual(self.daemon.boards, self.history)
 
+    def test_ignore_patterns(self):
+        """Test that pattern matches aren't added to history."""
+        self.config.set('clipster', 'ignore_patterns', 'yes')
+        board = 'PRIMARY'
+        self.daemon.ignore_patterns = ['^cat$']
+        self.daemon.update_history(board, 'cat')
+        self.daemon.update_history(board, 'placate')
+        self.assertTrue('cat' not in self.daemon.boards[board])
+        self.assertTrue('placate' in self.daemon.boards[board])
+
     @mock.patch('clipster.os')
     @mock.patch('clipster.tempfile.NamedTemporaryFile')
     def test_write_history_file_json(self, mock_tmp, mock_os):
