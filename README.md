@@ -183,8 +183,11 @@ You can create a config file containing only some of the options, and the rest w
 
 # Comma-separated list of WM_CLASS properties for apps where clipboard changes should be ignored.
 # Used to ignore clipboard changes from sensitive apps, e.g. password managers.
-#filter_classes = ""
+blacklist_classes = 
 
+# Comma-separated list of WM_CLASS properties for apps where clipboard changes should NOT be ignored.
+# Used to only monitor clipboard changes from whitelisted apps, all other apps will be ignored!
+whitelist_classes = 
 ```
 
 ## Using Clipster
