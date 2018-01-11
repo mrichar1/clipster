@@ -204,8 +204,8 @@ class Daemon(object):
         self.update_history_file = False
         # Flag whether next clipboard change should be ignored
         self.ignore_next = {'PRIMARY': False, 'CLIPBOARD': False}
-        if self.config.get('clipster', 'filter_classes'):
-            self.filterd_classes = self.config.get('clipster', 'filter_classes').lower().split(',')
+        if self.config.get('clipster', 'blacklist_classes'):
+            self.filterd_classes = self.config.get('clipster', 'blacklist_classes').lower().split(',')
             self.has_filter_list = True
         else:
             self.has_filter_list = False
@@ -468,7 +468,7 @@ class Daemon(object):
         # Only monitor owner-change events for apps with certain WM_CLASS values
         if self.has_whitelist:
             if not Wnck:
-                logging.error("'filter_classes' requires Wnck (libwnck3).")
+                logging.error("'blacklist_classes' requires Wnck (libwnck3).")
                 return True
             classes = self.whitelist_classes
             logging.debug("Whitelist classes enabled for: %s", classes)
@@ -484,7 +484,7 @@ class Daemon(object):
         # Ignore owner-change events for apps with certain WM_CLASS values
         if self.has_filter_list:
             if not Wnck:
-                logging.error("'filter_classes' requires Wnck (libwnck3).")
+                logging.error("'blacklist_classes' requires Wnck (libwnck3).")
                 return True
             classes = self.filterd_classes
             logging.debug("Filter classes enabled for: %s", classes)
@@ -820,7 +820,7 @@ def parse_config(args, data_dir, conf_dir):
                        "ignore_patterns": "no",  # Ignore selections which match regex patterns stored in data_dir/ignore_patterns (one per line).
                        "ignore_patterns_file": "%(conf_dir)s/ignore_patterns",  # patterns file for ignore_patterns
                        "pattern_as_selection": "no",  # Extracted pattern should replace current selection.
-                       "filter_classes": "",  # Comma-separated list of WM_CLASS to identify apps from which to ignore owner-change events
+                       "blacklist_classes": "",  # Comma-separated list of WM_CLASS to identify apps from which to ignore owner-change events
                        "whitelist_classes": ""}  # Comma-separated list of WM_CLASS to identify apps from which to not ignore owner-change events
 
     config = configparser.SafeConfigParser(config_defaults)
