@@ -204,6 +204,16 @@ class Daemon(object):
         self.update_history_file = False
         # Flag whether next clipboard change should be ignored
         self.ignore_next = {'PRIMARY': False, 'CLIPBOARD': False}
+        if self.config.get('clipster', 'filter_classes'):
+            self.filterd_classes = self.config.get('clipster', 'filter_classes').lower().split(',')
+            self.has_filter_list = True
+        else:
+            self.has_filter_list = False
+        if self.config.get('clipster', 'whitelist_classes'):
+            self.whitelist_classes = self.config.get('clipster', 'whitelist_classes').lower().split(',')
+            self.has_whitelist = True
+        else:
+            self.has_whitelist = False
 
     def keypress_handler(self, widget, event, board, tree_select):
         """Handle selection_widget keypress events."""
@@ -456,11 +466,11 @@ class Daemon(object):
             return
 
         # Only monitor owner-change events for apps with certain WM_CLASS values
-        if self.config.get('clipster', 'whitelist_classes'):
+        if self.has_whitelist:
             if not Wnck:
                 logging.error("'filter_classes' requires Wnck (libwnck3).")
                 return True
-            classes = self.config.get('clipster', 'whitelist_classes').lower().split(',')
+            classes = self.whitelist_classes
             logging.debug("Whitelist classes enabled for: %s", classes)
             screen = Wnck.Screen.get_default()
             screen.force_update()
@@ -472,11 +482,11 @@ class Daemon(object):
                 return True
 
         # Ignore owner-change events for apps with certain WM_CLASS values
-        if self.config.get('clipster', 'filter_classes'):
+        if self.has_filter_list:
             if not Wnck:
                 logging.error("'filter_classes' requires Wnck (libwnck3).")
                 return True
-            classes = self.config.get('clipster', 'filter_classes').lower().split(',')
+            classes = self.filterd_classes
             logging.debug("Filter classes enabled for: %s", classes)
             screen = Wnck.Screen.get_default()
             screen.force_update()
