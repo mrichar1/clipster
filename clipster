@@ -466,8 +466,8 @@ class Daemon(object):
                 logging.error("'whitelist_classes' or 'blacklist_classes' require Wnck (libwnck3).")
                 return True
             wm_class = get_wm_class_from_active_window().lower()
-            if (self.whitelist_classes and wm_class not in self.whitelist_classes) \
-            or (self.blacklist_classes and wm_class in self.blacklist_classes):
+            if (self.whitelist_classes and wm_class not in self.whitelist_classes) or \
+            (self.blacklist_classes and wm_class in self.blacklist_classes):
                 logging.debug("Ignoring active window.")
                 return True
 
