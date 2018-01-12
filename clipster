@@ -204,12 +204,8 @@ class Daemon(object):
         self.update_history_file = False
         # Flag whether next clipboard change should be ignored
         self.ignore_next = {'PRIMARY': False, 'CLIPBOARD': False}
-        self.blacklist_classes = self.config.get('clipster', 'blacklist_classes', fallback='')
-        if self.blacklist_classes != '' and self.blacklist_classes != r'""':
-            self.blacklist_classes = self.blacklist_classes.lower().split(',')
-        self.whitelist_classes = self.config.get('clipster', 'whitelist_classes', fallback='')
-        if self.whitelist_classes != '' and self.whitelist_classes != r'""':
-            self.whitelist_classes = self.whitelist_classes.lower().split(',')
+        self.blacklist_classes = parse_option_string(self.config.get('clipster', 'blacklist_classes'))
+        self.whitelist_classes = parse_option_string(self.config.get('clipster', 'whitelist_classes'))
 
     def keypress_handler(self, widget, event, board, tree_select):
         """Handle selection_widget keypress events."""
@@ -741,6 +737,14 @@ class Daemon(object):
 
         Gtk.main()
 
+
+def parse_option_string(string):
+    """Parse a configured option's string of elements,
+    splits it around "," and returns a list of items in lower case,
+    or an empty string the string was empty in the first place."""
+    if string != '' and string != r'""':
+        return string.lower().split(',')
+    return string
 
 def parse_args():
     """Parse command-line arguments."""
