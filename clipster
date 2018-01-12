@@ -746,6 +746,7 @@ def parse_option_string(string):
         return string.lower().split(',')
     return string
 
+
 def parse_args():
     """Parse command-line arguments."""
 
