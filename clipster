@@ -204,6 +204,16 @@ class Daemon(object):
         self.update_history_file = False
         # Flag whether next clipboard change should be ignored
         self.ignore_next = {'PRIMARY': False, 'CLIPBOARD': False}
+        self.whitelist_classes = self.blacklist_classes = []
+        if Wnck:
+            self.blacklist_classes = get_list_from_option_string(self.config.get('clipster', 'blacklist_classes'))
+            self.whitelist_classes = get_list_from_option_string(self.config.get('clipster', 'whitelist_classes'))
+            if self.whitelist_classes:
+                logging.debug("Whitelist classes enabled for: %s", self.whitelist_classes)
+            if self.blacklist_classes:
+                logging.debug("Blacklist classes enabled for: %s", self.blacklist_classes)
+        else:
+            logging.error("'whitelist_classes' or 'blacklist_classes' require Wnck (libwnck3).")
 
     def keypress_handler(self, widget, event, board, tree_select):
         """Handle selection_widget keypress events."""
@@ -455,19 +465,12 @@ class Daemon(object):
         if selection not in active:
             return
 
-        # Ignore owner-change events for apps with certain WM_CLASS values
-        if self.config.get('clipster', 'filter_classes'):
-            if not Wnck:
-                logging.error("'filter_classes' requires Wnck (libwnck3).")
-                return True
-            classes = self.config.get('clipster', 'filter_classes').lower().split(',')
-            logging.debug("Filter classes enabled for: %s", classes)
-            screen = Wnck.Screen.get_default()
-            screen.force_update()
-            active_window = screen.get_active_window()
-            wm_class = active_window.get_class_group_name()
-            logging.debug("Active window class is %s", wm_class)
-            if wm_class.lower() in classes:
+        # Only monitor owner-change events for apps with WM_CLASS values found
+        # in whitelist and not found in blacklist
+        if self.whitelist_classes or self.blacklist_classes:
+            wm_class = get_wm_class_from_active_window().lower()
+            if (self.whitelist_classes and wm_class not in self.whitelist_classes) or \
+               (self.blacklist_classes and wm_class in self.blacklist_classes):
                 logging.debug("Ignoring active window.")
                 return True
 
@@ -722,6 +725,25 @@ class Daemon(object):
         Gtk.main()
 
 
+def get_wm_class_from_active_window():
+    """Returns the current active window's WM_CLASS"""
+    screen = Wnck.Screen.get_default()
+    screen.force_update()
+    active_window = screen.get_active_window()
+    wm_class = active_window.get_class_group_name()
+    logging.debug("Active window class is %s", wm_class)
+    return wm_class
+
+
+def get_list_from_option_string(string):
+    """Parse a configured option's string of elements,
+    splits it around "," and returns a list of items in lower case,
+    or an empty list if string was empty."""
+    if string and string != r'""':
+        return string.lower().split(',')
+    return []
+
+
 def parse_args():
     """Parse command-line arguments."""
 
@@ -794,7 +816,8 @@ def parse_config(args, data_dir, conf_dir):
                        "ignore_patterns": "no",  # Ignore selections which match regex patterns stored in data_dir/ignore_patterns (one per line).
                        "ignore_patterns_file": "%(conf_dir)s/ignore_patterns",  # patterns file for ignore_patterns
                        "pattern_as_selection": "no",  # Extracted pattern should replace current selection.
-                       "filter_classes": ""}  # Comma-separated list of WM_CLASS to identify apps from which to ignore owner-change events
+                       "blacklist_classes": "",  # Comma-separated list of WM_CLASS to identify apps from which to ignore owner-change events
+                       "whitelist_classes": ""}  # Comma-separated list of WM_CLASS to identify apps from which to not ignore owner-change events
 
     config = configparser.SafeConfigParser(config_defaults)
     config.add_section('clipster')
