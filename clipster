@@ -204,8 +204,8 @@ class Daemon(object):
         self.update_history_file = False
         # Flag whether next clipboard change should be ignored
         self.ignore_next = {'PRIMARY': False, 'CLIPBOARD': False}
-        self.blacklist_classes = parse_option_string(self.config.get('clipster', 'blacklist_classes'))
-        self.whitelist_classes = parse_option_string(self.config.get('clipster', 'whitelist_classes'))
+        self.blacklist_classes = []
+        self.whitelist_classes = []
 
     def keypress_handler(self, widget, event, board, tree_select):
         """Handle selection_widget keypress events."""
@@ -458,7 +458,8 @@ class Daemon(object):
             return
 
         # Only monitor owner-change events for apps with certain WM_CLASS values
-        if not isinstance(self.whitelist_classes, str):
+        self.whitelist_classes = get_list_from_option_string(self.config.get('clipster', 'whitelist_classes'))
+        if self.whitelist_classes:
             if not Wnck:
                 logging.error("'whitelist_classes' requires Wnck (libwnck3).")
                 return True
@@ -473,7 +474,8 @@ class Daemon(object):
                 return True
 
         # Ignore owner-change events for apps with certain WM_CLASS values
-        if not isinstance(self.blacklist_classes, str):
+        self.blacklist_classes = get_list_from_option_string(self.config.get('clipster', 'blacklist_classes'))
+        if self.blacklist_classes:
             if not Wnck:
                 logging.error("'blacklist_classes' requires Wnck (libwnck3).")
                 return True
@@ -738,13 +740,13 @@ class Daemon(object):
         Gtk.main()
 
 
-def parse_option_string(string):
+def get_list_from_option_string(string):
     """Parse a configured option's string of elements,
     splits it around "," and returns a list of items in lower case,
-    or an empty string the string was empty in the first place."""
-    if string != '' and string != r'""':
+    or an empty list if string was empty."""
+    if string and string != r'""':
         return string.lower().split(',')
-    return string
+    return []
 
 
 def parse_args():
