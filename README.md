@@ -33,7 +33,9 @@ Clipster was designed to try to add a good selection of useful features, while a
 
 * Option to track one or both clipboards.  (`active_selections`)
 
-* Option to ignore clipboard updates form certain applications. (`filter_classes`)
+* Option to ignore clipboard updates from certain applications. (`blacklist_classes`)
+
+* Option to only monitor clipboard updates from certain applications. (`whitelist_classes`)
 
 * Ability to delete items in clipboard history from GUI or command-line. (`--delete`, `--erase-entire-board`)
 
@@ -183,11 +185,11 @@ You can create a config file containing only some of the options, and the rest w
 
 # Comma-separated list of WM_CLASS properties for apps where clipboard changes should be ignored.
 # Used to ignore clipboard changes from sensitive apps, e.g. password managers.
-blacklist_classes = 
+#blacklist_classes = 
 
 # Comma-separated list of WM_CLASS properties for apps where clipboard changes should NOT be ignored.
 # Used to only monitor clipboard changes from whitelisted apps, all other apps will be ignored!
-whitelist_classes = 
+#whitelist_classes = 
 ```
 
 ## Using Clipster
@@ -283,7 +285,7 @@ To determine the WM_CLASS for an application:
 For example, to ignore keepass2, emacs and firefox, add the following list to your config file:
 
 ```
-filter_classes = KeePass2,Emacs24,Firefox
+blacklist_classes = KeePass2,Emacs24,Firefox
 ```
 
 ## Client/Server Protocol

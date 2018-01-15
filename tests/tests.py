@@ -436,5 +436,13 @@ class DaemonTestCase(unittest.TestCase):
         # Board should be empty
         self.assertEqual(len(self.history[board]), 0)
 
+    def test_get_list_from_option_string(self):
+        """Parse option string for whitelist and blacklist"""
+
+        blacklist = self.config.get('clipster', 'blacklist_classes')
+        self.assertEqual(clipster.get_list_from_option_string(r'""'), [])
+        self.assertEqual(clipster.get_list_from_option_string(""), [])
+        self.assertEqual(clipster.get_list_from_option_string("thunar,chromium,catfish"), ["thunar", "chromium", "catfish"])
+
 if __name__ == "__main__":
     unittest.main()
