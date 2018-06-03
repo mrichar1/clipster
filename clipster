@@ -479,16 +479,10 @@ class Daemon(object):
         # Some apps update primary during mouse drag (chrome)
         # Block at start to prevent repeated triggering
         board.handler_block(event_id)
-        # FIXME: this devs hack is a bit verbose. Look instead at
-        # gdk_seat_get_pointer -> gdk_device_get_state
-        # once GdkSeat is in stable
-        for dev in self.window.get_display().get_device_manager().list_devices(Gdk.DeviceType.MASTER):
-            if dev.get_source() == Gdk.InputSource.MOUSE:
-                while Gdk.ModifierType.BUTTON1_MASK & self.window.get_root_window().get_device_position(dev)[3]:
-                    # Do nothing while mouse button is held down (selection drag)
-                    pass
-            break
-
+        display = self.window.get_display()
+        while Gdk.ModifierType.BUTTON1_MASK & display.get_pointer().mask:
+            # Do nothing while mouse button is held down (selection drag)
+            pass
         # Try to get text from clipboard
         text = board.wait_for_text()
         if text:
@@ -901,6 +895,7 @@ def safe_decode(data):
     except (UnicodeDecodeError, UnicodeEncodeError, AttributeError):
         pass
     return data
+
 
 if __name__ == "__main__":
     try:
