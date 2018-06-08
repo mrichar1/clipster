@@ -437,12 +437,69 @@ class DaemonTestCase(unittest.TestCase):
         self.assertEqual(len(self.history[board]), 0)
 
     def test_get_list_from_option_string(self):
-        """Parse option string for whitelist and blacklist"""
+        """Test parsing comma separated option string from the config file."""
 
-        blacklist = self.config.get('clipster', 'blacklist_classes')
         self.assertEqual(clipster.get_list_from_option_string(r'""'), [])
-        self.assertEqual(clipster.get_list_from_option_string(""), [])
-        self.assertEqual(clipster.get_list_from_option_string("thunar,chromium,catfish"), ["thunar", "chromium", "catfish"])
+        self.assertEqual(clipster.get_list_from_option_string(''), [])
+        self.assertEqual(clipster.get_list_from_option_string('thunar,chromium,catfish'), ['thunar', 'chromium', 'catfish'])
+
+    def test_setup_of_blacklist_and_whitelist(self):
+        """Test that config strings for whitelist_classes and blacklist_classes
+        are parsed and stored properly in their respsecive class field."""
+
+        self.config.set('clipster', 'blacklist_classes', "thunar,chromium,kate")
+        self.config.set('clipster', 'whitelist_classes', "subl3")
+        # Parsing is done in Daemon.__init__()
+        self.assertNotEqual(clipster.Wnck, None)
+        self.daemon = clipster.Daemon(self.config)
+        # unnecessary assertion, already tested in the previous test above
+        self.assertEqual(self.daemon.blacklist_classes, ['thunar', 'chromium', 'kate'])
+        self.assertEqual(self.daemon.whitelist_classes, ['subl3'])
+
+    @mock.patch('clipster.get_wm_class_from_active_window')
+    def test_filtered_window_classes(self, mock_class):
+        """Test that blacklist/whitelist properly disables/enables capturing
+        clipboard content into history. 
+        Note: blacklist has precedence over whitelist."""
+
+        self.daemon.window = Gtk.Window(type=Gtk.WindowType.POPUP)
+        self.daemon.p_id = self.daemon.primary.connect('owner-change',
+                                                       self.daemon.owner_change)
+        self.daemon.c_id = self.daemon.clipboard.connect('owner-change',
+                                                        self.daemon.owner_change)
+
+        self.daemon.blacklist_classes = ['thunar', 'chromium', 'kate', 'catfish']
+        self.daemon.whitelist_classes = ['subl3', 'catfish']
+
+        wm_classes = iter((('subl3', False), ('firefox', True),
+                           ('chromium', True), ('catfish', True)))
+
+        def test_owner_change_event(test_class, filtered_out):
+            """For each mock test_class, if it should be filtered out, the test
+            string should not be found in the clipboard history."""
+
+            self.daemon.boards = {"PRIMARY": [], "CLIPBOARD": []}
+            test_string = "testing with class " + test_class
+            mock_class.return_value=test_class
+            self.daemon.primary.set_text(test_string, -1)
+
+            self.assertEqual(test_string, self.daemon.primary.wait_for_text())
+            self.assertEqual(test_string, self.daemon.read_board('primary'))
+
+            mock_event = mock.MagicMock() #Gdk.EventOwnerChange
+            mock_event.selection = "PRIMARY"
+
+            self.daemon.owner_change(self.daemon.primary, mock_event)
+
+            mock_class.assert_called() # debug
+
+            if filtered_out:
+                self.assertNotIn(test_string, self.daemon.boards["PRIMARY"])
+            else:
+                self.assertIn(test_string, self.daemon.boards["PRIMARY"])
+
+        for test_class in wm_classes:
+            test_owner_change_event(test_class[0], test_class[1])
 
 if __name__ == "__main__":
     unittest.main()
