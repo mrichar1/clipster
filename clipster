@@ -788,7 +788,7 @@ def parse_config(args, data_dir, conf_dir):
     """Configuration derived from defaults & file."""
 
     # Set some config defaults
-    config_defaults = {"data_dir": data_dir,  # clipster 'root' dir (see history/socket/pid file config)
+    config_defaults = {"data_dir": data_dir,  # clipster 'root' dir (see history/socket config)
                        "conf_dir": conf_dir,  # clipster config dir (see pattern/ignore_pattern file config). Can be overridden using -f cmd-line arg.
                        "default_selection": "PRIMARY",  # PRIMARY or CLIPBOARD
                        "active_selections": "PRIMARY,CLIPBOARD",  # Comma-separated list of selections to monitor/save
@@ -798,7 +798,7 @@ def parse_config(args, data_dir, conf_dir):
                        "history_update_interval": "60",  # Flush history to disk every N seconds, if changed (0 disables timeout)
                        "write_on_change": "no",  # Always write history file immediately (overrides history_update_interval)
                        "socket_file": "%(data_dir)s/clipster_sock",
-                       "pid_file": "%(data_dir)s/clipster.pid",
+                       "pid_file": "/run/user/{}/clipster.pid".format(os.getuid()),
                        "max_input": "50000",  # max length of selection input
                        "row_height": "3",  # num rows to show in widget
                        "duplicates": "no",  # allow duplicates, or instead move the original entry to top
