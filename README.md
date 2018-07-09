@@ -50,6 +50,8 @@ New feature requests always welcome! See `Bugs & Improvements` at the end of thi
 
 [![Build Status](https://travis-ci.org/mrichar1/clipster.svg?branch=master)](https://travis-ci.org/mrichar1/clipster)
 
+**NOTE:** Clipster >= 2.x requires Gtk >=3.20 for its handling of click and drag selection events. This is the default on most modern OSes - however you may need to use a pre-2.x release if your OS doesn't support this version of Gtk.
+
 You will need to install the python bindings for the gobject introspection libraries. These are provided by the `python-gi` and `gir1.2-gtk-3.0` packages on debian-based systems, or by the `pygobject3` package on redhat-based systems.
 
 To install Clipster, simply download the clipster script from this repository and save it somewhere in your path.
