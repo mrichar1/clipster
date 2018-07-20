@@ -25,13 +25,13 @@ try:
     from gi.repository import Wnck
 except (ImportError, ValueError):
     Wnck = None
-try:
+
+if sys.version_info.major == 3:
     # py 3.x
     import configparser
-except ImportError:
+else:
     # py 2.x
     import ConfigParser as configparser
-    # Use this as a handy place to make some other compatibility hacks
     # In python 2, ENOENT is sometimes IOError and sometimes OSError. Catch
     # both by catching their immediate superclass exception EnvironmentError.
     FileNotFoundError = EnvironmentError  # pylint: disable=redefined-builtin
