@@ -28,10 +28,10 @@ except (ImportError, ValueError):
 
 if sys.version_info.major == 3:
     # py 3.x
-    import configparser
+    from configparser import ConfigParser as SafeConfigParser
 else:
     # py 2.x
-    import ConfigParser as configparser
+    from ConfigParser import SafeConfigParser
     # In python 2, ENOENT is sometimes IOError and sometimes OSError. Catch
     # both by catching their immediate superclass exception EnvironmentError.
     FileNotFoundError = EnvironmentError  # pylint: disable=redefined-builtin
@@ -813,7 +813,7 @@ def parse_config(args, data_dir, conf_dir):
                        "blacklist_classes": "",  # Comma-separated list of WM_CLASS to identify apps from which to ignore owner-change events
                        "whitelist_classes": ""}  # Comma-separated list of WM_CLASS to identify apps from which to not ignore owner-change events
 
-    config = configparser.SafeConfigParser(config_defaults)
+    config = SafeConfigParser(config_defaults)
     config.add_section('clipster')
 
     # Try to read config file (either passed in, or default value)
