@@ -480,7 +480,7 @@ class Daemon(object):
         # Block at start to prevent repeated triggering
         board.handler_block(event_id)
         display = self.window.get_display()
-        while Gdk.ModifierType.BUTTON1_MASK & display.get_pointer().mask:
+        while Gdk.ModifierType.BUTTON1_MASK & display.get_pointer()[2]:
             # Do nothing while mouse button is held down (selection drag)
             pass
         # Try to get text from clipboard
