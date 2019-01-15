@@ -178,7 +178,10 @@ class Client(object):
         if data:
             # data is a list of 1 or more parts of a json string.
             # Reassemble this, then join with delimiter
-            return self.args.delim.join(json.loads(''.join(data)))
+            json_data = json.loads(''.join(data))
+            if self.args.position is not None:
+                json_data = json_data[self.args.position]
+            return self.args.delim.join(json_data)
 
 
 class Daemon(object):
@@ -770,7 +773,8 @@ def parse_args():
                            help="Delete from clipboard. Deletes matching text, or if no argument given, deletes last item.")
     actiongrp.add_argument('--erase-entire-board', action="store_true",
                            help="Delete all items from the clipboard.")
-
+    parser.add_argument('-N', '--position', action="store", type=int,
+                        help="Return an entry from a specific indexed position. Defaults to -1 (last entry).")
     parser.add_argument('-n', '--number', action="store", type=int, default=1,
                         help="Number of lines to output: defaults to 1 (See -o). 0 returns entire history.")
 
@@ -860,6 +864,10 @@ def main():
 
     # parse command-line arguments
     args = parse_args()
+
+    # Ensure that number is 0 if position is used to get all history
+    if args.position is not None:
+        args.number = 0
 
     # Enable logging
     logging.basicConfig(format='%(levelname)s:%(message)s',
