@@ -491,7 +491,8 @@ class DaemonTestCase(unittest.TestCase):
 
             self.daemon.owner_change(self.daemon.primary, mock_event)
 
-            mock_class.assert_called() # debug
+            # Only works in >= 3.6
+            # mock_class.assert_called() # debug
 
             if filtered_out:
                 self.assertNotIn(test_string, self.daemon.boards["PRIMARY"])
