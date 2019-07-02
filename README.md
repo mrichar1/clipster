@@ -80,7 +80,7 @@ optional arguments:
                         CRITICAL
   -p, --primary         Query, or write STDIN to, the PRIMARY clipboard.
   -c, --clipboard       Query, or write STDIN to, the CLIPBOARD clipboard.
-  -d, --daemon          Launch the daemon.
+  -d, --daemon          Launch the daemon (runs in foreground).
   -s, --select          Launch the clipboard history selection window.
   -o, --output          Output last selection from history. (See -n and -S).
   -i, --ignore          Instruct daemon to ignore next update to clipboard.
@@ -204,7 +204,7 @@ The first step is to launch the Clipster daemon:
 ~$ clipster -d
 ```
 
-This can be run as a background task on session start.
+This can be run as a background task on session start - e.g. using `&` in a shell script, or a startup manager (e.g. `systemd`, `daemonise` etc).
 
 For debugging, use the `-l` option:
 
