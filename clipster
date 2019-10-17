@@ -427,6 +427,7 @@ class Daemon(object):
         # Insert selection into history before pattern matching
         self.boards[board].append(text)
 
+        intermediates = [text]
         for pattern in self.patterns:
             try:
                 for match in set(re.findall(pattern, text)):
@@ -438,10 +439,12 @@ class Daemon(object):
                             self.ignore_next[board] = True
                             self.update_board(board, match)
                             self.boards[board].append(match)
+                            intermediates.append(match)
                         else:
                             self.boards[board].insert(-1, match)
             except re.error as exc:
                 logging.warning("Skipping invalid pattern '%s': %s", pattern, exc.args[0])
+        text = self.read_board(board)
 
         # Flag that the history file needs updating
         self.update_history_file = True
@@ -452,10 +455,13 @@ class Daemon(object):
             # Whichever board we just set, set the other one, if it's active
             boards = list(self.boards)
             boards.remove(board)
+            other_board = boards[0]
             # Stop if the board already contains the text.
-            if boards[0] in self.config.get('clipster', 'active_selections') and self.read_board(boards[0]) != text:
-                logging.debug("Syncing board %s to %s", board, boards[0])
-                self.update_board(boards[0], text)
+            if other_board in self.config.get('clipster', 'active_selections') and self.read_board(other_board) != text:
+                if intermediates[1:]:
+                    self.boards[other_board].extend(intermediates[:-1])
+                logging.debug("Syncing board %s to %s", board, other_board)
+                self.update_board(other_board, text)
 
     def owner_change(self, board, event):
         """Handler for owner-change clipboard events."""
