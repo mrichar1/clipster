@@ -180,7 +180,7 @@ class Client(object):
             # Reassemble this, then join with delimiter
             json_data = json.loads(''.join(data))
             if self.args.position is not None:
-                json_data = json_data[self.args.position]
+                json_data = json_data[self.args.position:self.args.position+1]
             return self.args.delim.join(json_data)
 
 
