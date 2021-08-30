@@ -66,8 +66,7 @@ There are AUR packages available for Arch Linux users: [clipster-git](https://au
 
 ```
 ~$ clipster -h
-usage: clipster [-h] [-f CONFIG] [-l LOG_LEVEL] [-p | -c | -d]
-                [-s | -o | -i | -r [DELETE]] [-n NUMBER] [-0] [-m DELIM]
+usage: clipster [-h] [-f CONFIG] [-l LOG_LEVEL] [-p | -c | -d] [-s | -o | -i | -r [DELETE] | --erase-entire-board] [-N POSITION] [-n NUMBER] [-S SEARCH] [-m DELIM] [-0]
 
 Clipster clipboard manager.
 
@@ -76,26 +75,25 @@ optional arguments:
   -f CONFIG, --config CONFIG
                         Path to config directory.
   -l LOG_LEVEL, --log_level LOG_LEVEL
-                        Set log level: DEBUG, INFO (default), WARNING, ERROR,
-                        CRITICAL
+                        Set log level: DEBUG, INFO (default), WARNING, ERROR, CRITICAL
   -p, --primary         Query, or write STDIN to, the PRIMARY clipboard.
   -c, --clipboard       Query, or write STDIN to, the CLIPBOARD clipboard.
-  -d, --daemon          Launch the daemon (runs in foreground).
+  -d, --daemon          Launch the daemon.
   -s, --select          Launch the clipboard history selection window.
-  -o, --output          Output last selection from history. (See -n and -S).
+  -o, --output          Output selection from history. (See -n and -S).
   -i, --ignore          Instruct daemon to ignore next update to clipboard.
   -r [DELETE], --delete [DELETE]
-                        Delete from clipboard. Deletes matching text, or if no
-                        argument given, deletes last item.
+                        Delete from clipboard. Deletes matching text, or if no argument given, deletes last item.
   --erase-entire-board  Delete all items from the clipboard.
+  -N POSITION, --position POSITION
+                        Return an entry from a specific indexed position. Defaults to -1 (last entry).
   -n NUMBER, --number NUMBER
-                        Number of lines to output: defaults to 1 (See -o).
-                        0 returns entire history.
+                        Number of lines to output: defaults to 1 (See -o). 0 returns entire history.
   -S SEARCH, --search SEARCH
                         Pattern to match for output.
-  -0, --nul             Use NUL character as output delimiter.
   -m DELIM, --delim DELIM
-                        String to use as output delimiter (defaults to '\n')
+                        String to use as output delimiter (defaults to ' ')
+  -0, --nul             Use NUL character as output delimiter.
 ```
 
 
@@ -187,11 +185,11 @@ You can create a config file containing only some of the options, and the rest w
 
 # Comma-separated list of WM_CLASS properties for apps where clipboard changes should be ignored.
 # Used to ignore clipboard changes from sensitive apps, e.g. password managers.
-#blacklist_classes = 
+#blacklist_classes =
 
 # Comma-separated list of WM_CLASS properties for apps where clipboard changes should NOT be ignored.
 # Used to only monitor clipboard changes from whitelisted apps, all other apps will be ignored!
-#whitelist_classes = 
+#whitelist_classes =
 ```
 
 ## Using Clipster
