@@ -1,0 +1,8 @@
+[MASTER]
+
+[MESSAGES CONTROL]
+ignored-modules=gi
+
+[REPORTS]
+reports=no
+
