@@ -257,7 +257,7 @@ For example, in i3 (my WM of choice) I have the following in my .i3/config file:
 exec --no-startup-id clipster -d
 
 # shortcut to selection widget (primary)
-bindsym $mod+c exec clipster -sp
+bindsym $mod+c exec --no-startup-id clipster -sp
 
 ```
 
